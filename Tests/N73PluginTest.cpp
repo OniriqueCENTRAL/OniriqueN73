@@ -143,6 +143,80 @@ int main()
         check (ok, "mono : traitement");
     }
 
+    // préampli comme sur le plugin UAD
+    {
+        // sinus 1 kHz, 60 blocs ; renvoie la sortie du canal gauche
+        auto run = [] (N73Processor& p, float amp, std::vector<float>* in = nullptr)
+        {
+            juce::MidiBuffer midi;
+            std::vector<float> out;
+            for (int b = 0; b < 60; ++b)
+            {
+                juce::AudioBuffer<float> buf (2, 256);
+                for (int s = 0; s < 256; ++s)
+                {
+                    const float v = amp * std::sin (2.0f * juce::MathConstants<float>::pi * 1000.0f * (float) (b * 256 + s) / 48000.0f);
+                    buf.setSample (0, s, v); buf.setSample (1, s, v);
+                    if (in != nullptr) in->push_back (v);
+                }
+                p.processBlock (buf, midi);
+                for (int s = 0; s < 256; ++s) out.push_back (buf.getSample (0, s));
+            }
+            return out;
+        };
+        auto peakOf = [] (const std::vector<float>& v)
+        {
+            float m = 0; for (size_t i = v.size() / 2; i < v.size(); ++i) m = std::max (m, std::abs (v[i])); return m;
+        };
+
+        // gain sur OFF : le traitement s'arrête, le son passe tel quel (retardé de la latence)
+        for (int off : { 7, 15 })
+        {
+            auto p = make();
+            setReal (*p, params::gain, (float) off);
+            std::vector<float> in;
+            const auto out = run (*p, 0.25f, &in);
+            const int lat = p->getLatencySamples();
+            float err = 0;
+            for (size_t i = 40 * 256; i < out.size(); ++i) err = std::max (err, std::abs (out[i] - in[i - (size_t) lat]));
+            check (err < 1.0e-5f, "gain sur OFF (position " + juce::String (off) + ") : le son passe tel quel (écart " + juce::String (err) + ")");
+        }
+
+        // PAD n'agit que sur l'entrée micro
+        {
+            auto a = make(), b = make();
+            setReal (*a, params::gain, 4); setReal (*b, params::gain, 4); setReal (*b, params::pad, 1);
+            const float pa = peakOf (run (*a, 0.1f)), pb = peakOf (run (*b, 0.1f));
+            check (std::abs (pa - pb) < 1.0e-6f, "PAD sans effet en LINE");
+            setReal (*a, params::gain, 10); setReal (*b, params::gain, 10);
+            const float ma = peakOf (run (*a, 0.01f)), mb = peakOf (run (*b, 0.01f));
+            check (mb < ma * 0.2f, "PAD : -20 dB en MIC (" + juce::String (juce::Decibels::gainToDecibels (mb / ma), 1) + " dB)");
+        }
+
+        // MIC / LINE : chaque entrée garde sa dernière position, y compris dans l'état sauvegardé
+        {
+            auto p = make();
+            check (p->lastGainIndex (true) == n73::defaultMicIndex && p->lastGainIndex (false) == n73::defaultLineIndex,
+                   "MIC / LINE : positions de départ MIC 20 et LINE 0");
+            setReal (*p, params::gain, 11); setReal (*p, params::gain, 2);
+            check (p->lastGainIndex (true) == 11 && p->lastGainIndex (false) == 2, "MIC / LINE : dernière position de chaque entrée");
+            juce::MemoryBlock mb; p->getStateInformation (mb);
+            auto q = make();
+            q->setStateInformation (mb.getData(), (int) mb.getSize());
+            check (q->lastGainIndex (true) == 11 && q->lastGainIndex (false) == 2 && (int) real (*q, params::gain) == 2,
+                   "MIC / LINE : mémoires retrouvées après restauration");
+        }
+
+        // fader (LEVEL) avant l'ampli de sortie : au-dessus de 0 dB, il le fait saturer
+        {
+            auto a = make(), b = make();
+            setReal (*b, params::fader, 10.0f);
+            const float pa = peakOf (run (*a, 0.56f)), pb = peakOf (run (*b, 0.56f));   // +21 dBu en LINE 0 (CAL +26)
+            const float gainDb = juce::Decibels::gainToDecibels (pb / pa);
+            check (gainDb > 1.0f && gainDb < 9.0f, "fader à +10 dB : l'ampli de sortie sature (+" + juce::String (gainDb, 1) + " dB au lieu de +10)");
+        }
+    }
+
     // latence déclarée
     {
         auto p = make();

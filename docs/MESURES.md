@@ -35,15 +35,16 @@ build\N73PluginTest_artefacts\Release\N73PluginTest.exe
 Elle vient seulement des filtres du suréchantillonnage (demi-bande IIR, latence entière). Aucun lookahead.
 Le bypass et POWER sont alignés sur cette latence (test : écart nul).
 
-## CPU (un cœur, 20 s stéréo, blocs de 128, EQ actif, HPF 80, MIC 60)
+## CPU (un cœur, 20 s stéréo, blocs de 128, EQ actif, HPF 80, MIC 60, sortie vers −20 dBFS)
 
 | Fréquence | Normale | Qualité haute |
 |---|---|---|
-| 44,1 kHz | 2,6 % | 5,2 % |
-| 48 kHz | 2,9 % | 5,7 % |
-| 96 kHz | 2,8 % | 5,7 % |
+| 44,1 kHz | 2,9 % | 5,8 % |
+| 48 kHz | 3,2 % | 6,3 % |
+| 96 kHz | 3,1 % | 6,3 % |
 
-Potentiomètres en mouvement permanent (recalcul des réseaux) : 3,0 % à 48 kHz.
+Potentiomètres en mouvement permanent (recalcul des réseaux) : 3,0 % à 48 kHz. Pire cas, tous les étages saturés
+(MIC 30, bruit à −20 dBFS) : 3,6 % à 48 kHz.
 Coût par composant (96 kHz, un canal) : transformateur 21 ns, étage de sortie + LO1166 33 ns, réseau HIGH / LOW
 12 ns, MID 12 ns, module complet 139 ns par échantillon.
 
@@ -60,5 +61,8 @@ Aux niveaux habituels (sous +24 dBu), la distorsion reste sous 0,2 % et le repli
   le changement de niveau voulu).
 - Plugin : sauvegarde / restauration de l'état, A / B, 7 presets d'usine, automation de tous les paramètres sur
   2 000 blocs de tailles variables, bypass, mono, latence — tout passe.
+- Préampli comme le manuel UAD : gain sur OFF = son tel quel (écart nul), PAD sans effet en LINE et −20,0 dB en MIC,
+  dernière position MIC / LINE retrouvée après restauration, fader à +10 dB qui fait saturer l'ampli de sortie
+  (+7,7 dB au lieu de +10 à +21 dBu) — tout passe.
 - Hôte d'essai (chargement, interface, suppression, déchargement, 3 tours) : sans plantage.
 - **Pas encore fait : l'essai dans FL Studio** (à faire par Nov).

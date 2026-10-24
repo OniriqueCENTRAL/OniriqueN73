@@ -1,6 +1,6 @@
 # ONIRIQUE N73 — suivi
 
-Dépôt local, sans remote. Aucun push, aucune publication sans accord explicite de Nov.
+Dépôt public OniriqueCENTRAL/OniriqueN73 : chaque push sur main est construit (Mac + Windows) et publié.
 
 ## Fait
 - Design validé dans Claude Design (https://claude.ai/artifact/LkFHWH3Hkn13PCZZPp6K4R), boutons rendus en 3D par
@@ -23,3 +23,6 @@ Publié : dépôt public OniriqueCENTRAL/OniriqueN73, slug et licence `onirique-
 - Suréchantillonnage ×2 à 44,1 / 48 kHz (4 éch. de latence), aucun à 96 kHz ; ×4 en qualité haute.
 - EQ en circuit à plat : −0,4 dB (propriété du réseau), conservé ; gains calés EQ hors circuit (conditions AMS).
 - EQL ne met pas le HIGH PASS hors circuit (S7 ne commute que l'EQ sur le schéma EH10023).
+- Préampli comme le manuel UAD : gains MIC et LINE séparés (clic sur MIC / LINE, dernière position de chaque entrée
+  gardée dans le projet), OFF = traitement arrêté (son tel quel), PAD et MIC Z grisés en LINE, impédances 1,2 k /
+  600 / 300 Ω, fader avant l'ampli de sortie. Plus de témoin de saturation en bas du module (demande de Nov).

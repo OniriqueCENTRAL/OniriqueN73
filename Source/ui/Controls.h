@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Theme.h"
+#include "../dsp/N73Core.h"
 
 namespace ui
 {
@@ -54,7 +55,12 @@ class Knob : public juce::Component, public juce::SettableTooltipClient
 public:
     enum class Kind { Gain, High, MidLow, Hpf, Output };
 
-    struct Label { juce::String text; float dx, dy, size; int index; };   // index : position mise en braise (-1 : jamais)
+    // index : position mise en braise (-1 : jamais) ; micInput / lineInput : les textes MIC et LINE du gain
+    struct Label { juce::String text; float dx, dy, size; int index; };
+    static constexpr int micInput = -2, lineInput = -3;
+
+    /** gain : dernière position de la plage MIC ou LINE, reprise quand on clique sur MIC ou LINE. */
+    std::function<int (bool mic)> inputMemory;
 
     Knob (Kind k, Assets& a, ValueBubble& b, juce::RangedAudioParameter& mainParam, juce::RangedAudioParameter* ringParam,
           juce::String accessibleName)
@@ -97,8 +103,11 @@ public:
             g.fillEllipse (juce::Rectangle<float> (d, d).withCentre (p));
         }
         for (const auto& l : labels)
-            textAt (g, l.text, c + juce::Point<float> (l.dx, l.dy) * s, l.size * s,
-                    l.index >= 0 && l.index == highlightedLabelIndex() ? ember : bone);
+        {
+            const bool lit = l.index >= 0 ? l.index == highlightedLabelIndex()
+                                          : (l.index == micInput && ! lineSelected()) || (l.index == lineInput && lineSelected());
+            textAt (g, l.text, c + juce::Point<float> (l.dx, l.dy) * s, l.size * s, lit ? ember : bone);
+        }
 
         // le bouton
         switch (kind)
@@ -132,13 +141,24 @@ public:
     {
         const auto p = juce::Point<float> ((float) x, (float) y);
         if (p.getDistanceFrom (centre) <= knobRadius * 1.15f * s) return true;
-        return labelAt (p) >= 0;
+        return labelAt (p) >= 0 || inputAt (p) != 0;
     }
 
     void mouseDown (const juce::MouseEvent& e) override
     {
         grabKeyboardFocus();
-        // clic sur une étiquette de position : on y va directement
+        // gain : clic sur MIC ou LINE, le bouton reprend la dernière position de cette entrée (comme sur le plugin UAD)
+        if (const int input = inputAt (e.position); input != 0)
+        {
+            target = Target::Main;
+            const bool mic = input == micInput;
+            if (lineSelected() == mic)
+                setIndex (target, inputMemory ? inputMemory (mic) : (mic ? n73::defaultMicIndex : n73::defaultLineIndex));
+            dragging = false;
+            showValue();
+            return;
+        }
+        // clic sur une étiquette de position : on y va directement (pour le gain, y compris dans l'autre plage)
         const int li = labelAt (e.position);
         if (li >= 0 && e.position.getDistanceFrom (centre) > knobRadius * s)
         {
@@ -164,7 +184,7 @@ public:
         if (isSwitch (target))
         {
             const int steps = (int) std::round (travel / 16.0f);
-            setIndexLive (target, (int) std::round (startValue) + steps);
+            setIndexLive (target, withinInput (target, (int) std::round (startValue), (int) std::round (startValue) + steps));
         }
         else
         {
@@ -186,6 +206,12 @@ public:
     {
         target = (kind == Kind::MidLow && e.position.getDistanceFrom (centre) > capRadius * s) ? Target::Ring : Target::Main;
         auto& p = param (target);
+        if (kind == Kind::Gain && target == Target::Main)
+        {
+            // gain : position de départ de l'entrée en cours (LINE 0 ou MIC 20), sans changer d'entrée
+            setIndex (target, lineSelected() ? n73::defaultLineIndex : n73::defaultMicIndex);
+            return;
+        }
         p.beginChangeGesture();
         p.setValueNotifyingHost (p.getDefaultValue());
         p.endChangeGesture();
@@ -269,7 +295,7 @@ private:
     }
     void nudge (Target t, int dir, bool fine)
     {
-        if (isSwitch (t)) { setIndex (t, (int) std::round (value (t)) + dir); return; }
+        if (isSwitch (t)) { const int i = (int) std::round (value (t)); setIndex (t, withinInput (t, i, i + dir)); return; }
         const auto r = param (t).getNormalisableRange();
         setOnce (t, juce::jlimit (r.start, r.end, value (t) + (float) dir * (fine ? 0.1f : 0.5f)));
     }
@@ -316,6 +342,25 @@ private:
             g.drawImage (img, juce::Rectangle<float> (boxBase * s, boxBase * s).withCentre (centre));
     }
 
+    // gain : LINE et MIC sont deux plages ; tourner le bouton ne fait pas passer de l'une à l'autre
+    bool lineSelected() const { return kind == Kind::Gain && n73::isLineIndex (index()); }
+    int withinInput (Target t, int from, int to) const
+    {
+        if (kind != Kind::Gain || t != Target::Main) return to;
+        return n73::isLineIndex (from) ? juce::jlimit (0, n73::lastLineIndex, to)
+                                       : juce::jlimit (n73::lastLineIndex + 1, n73::numGainPositions - 1, to);
+    }
+
+    /** micInput ou lineInput si p est sur le texte MIC ou LINE du gain, 0 sinon. */
+    int inputAt (juce::Point<float> p) const
+    {
+        for (const auto& l : labels)
+            if ((l.index == micInput || l.index == lineInput)
+                && p.getDistanceFrom (centre + juce::Point<float> (l.dx, l.dy) * s) < 18.0f * s)
+                return l.index;
+        return 0;
+    }
+
     int labelAt (juce::Point<float> p) const
     {
         for (const auto& l : labels)
@@ -348,9 +393,9 @@ private:
                 dotRadius = 64.5f; knobRadius = 58.0f;
                 labels = { { "dB", 4, -98, 12, -1 }, { juce::CharPointer_UTF8 ("\xe2\x88\x92" "80"), -4, -78, 12, 21 }, { "70", -38, -69, 12, 19 },
                            { "60", -71, -36, 12, 17 }, { "OFF", -85, -1, 11, 15 }, { "50", -78, 16, 12, 14 }, { "40", -59, 48, 12, 12 },
-                           { "MIC.", -73, 74, 12, -1 }, { "30", -18, 74, 12, 10 }, { juce::CharPointer_UTF8 ("\xe2\x88\x92" "20"), 21, 74, 12, 8 },
+                           { "MIC.", -73, 74, 12, micInput }, { "30", -18, 74, 12, 10 }, { juce::CharPointer_UTF8 ("\xe2\x88\x92" "20"), 21, 74, 12, 8 },
                            { "OFF", 53, 66, 11, 7 }, { "+10", 65, 47, 12, 6 }, { "0", 74, 19, 12, 4 }, { "10", 76, -20, 12, 2 },
-                           { juce::CharPointer_UTF8 ("\xe2\x88\x92" "20"), 59, -54, 12, 0 }, { "LINE", 61, -78, 12, -1 } };
+                           { juce::CharPointer_UTF8 ("\xe2\x88\x92" "20"), 59, -54, 12, 0 }, { "LINE", 61, -78, 12, lineInput } };
                 break;
             case Kind::High:
                 dotAngles = eqDots (17); dotRadius = 63.0f; knobRadius = 48.0f;
@@ -457,7 +502,7 @@ public:
         if (hasKeyboardFocus (false)) { g.setColour (ember.withAlpha (0.5f)); g.drawRoundedRectangle (slot.expanded (3.0f * s), 12.0f * s, 1.0f * s); }
     }
 
-    void mouseDown (const juce::MouseEvent&) override { grabKeyboardFocus(); flip(); }
+    void mouseDown (const juce::MouseEvent&) override { if (! isEnabled()) return; grabKeyboardFocus(); flip(); }
     bool keyPressed (const juce::KeyPress& k) override
     {
         if (k.isKeyCode (juce::KeyPress::spaceKey) || k.isKeyCode (juce::KeyPress::returnKey)) { flip(); return true; }
@@ -465,6 +510,8 @@ public:
     }
     void focusGained (FocusChangeType) override { repaint(); }
     void focusLost (FocusChangeType) override { repaint(); }
+    // désactivé (MIC Z et PAD sur l'entrée LINE, comme sur le plugin UAD) : estompé, ne bascule plus
+    void enablementChanged() override { setAlpha (isEnabled() ? 1.0f : 0.35f); }
 
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override
     {
@@ -475,6 +522,7 @@ public:
 private:
     void flip()
     {
+        if (! isEnabled()) return;
         param.beginChangeGesture();
         param.setValueNotifyingHost (on ? 0.0f : 1.0f);
         param.endChangeGesture();
@@ -680,47 +728,6 @@ private:
     float db = 0.0f, s = 1.0f, grabOffset = 0.0f;
 };
 
-//==============================================================================
-/** Témoin rond en bas du module : s'allume avec la dérive de l'étage de sortie, plein feu à la butée. */
-class DriveLamp : public juce::Component, private juce::Timer
-{
-public:
-    explicit DriveLamp (std::function<float()> source) : read (std::move (source))
-    {
-        setTitle ("Drive");
-        setInterceptsMouseClicks (false, false);
-        startTimerHz (30);
-    }
-    void paint (juce::Graphics& g) override
-    {
-        const auto r = getLocalBounds().toFloat().reduced ((float) getWidth() * 0.18f);
-        const float k = juce::jlimit (0.0f, 1.0f, level);
-        g.setColour (ember.withAlpha (0.15f + 0.55f * k));
-        g.fillEllipse (r.expanded (r.getWidth() * (0.15f + 0.35f * k)));
-        g.setColour (juce::Colours::black);
-        g.fillEllipse (r.expanded (r.getWidth() * 0.12f));
-        g.setColour (juce::Colour (0xff2a2427));
-        g.fillEllipse (r.expanded (r.getWidth() * 0.08f));
-        juce::ColourGradient lens (juce::Colour (0xff6e1520).interpolatedWith (juce::Colour (0xffff9aa3), 0.25f + 0.75f * k),
-                                   r.getX() + r.getWidth() * 0.4f, r.getY() + r.getHeight() * 0.35f,
-                                   juce::Colour (0xff3a0b10).interpolatedWith (juce::Colour (0xff6e1520), k), r.getRight(), r.getBottom(), true);
-        lens.addColour (0.4, juce::Colour (0xff5a1018).interpolatedWith (ember, k));
-        g.setGradientFill (lens);
-        g.fillEllipse (r);
-    }
-
-private:
-    void timerCallback() override
-    {
-        // 0,5 = moitié de la marge ; la lampe monte vite et redescend doucement
-        const float d = read();
-        const float target = juce::jlimit (0.0f, 1.0f, (d - 0.3f) / 0.65f);
-        level = target > level ? target : level * 0.9f + target * 0.1f;
-        if (std::abs (level - shown) > 0.01f) { shown = level; repaint(); }
-    }
-    std::function<float()> read;
-    float level = 0.0f, shown = -1.0f;
-};
 } // namespace ui
 
 namespace ui

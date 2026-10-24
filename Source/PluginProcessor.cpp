@@ -7,6 +7,8 @@ N73Processor::N73Processor()
       apvts (*this, nullptr, "N73", params::layout())
 {
     apvts.addParameterListener (params::quality, this);
+    apvts.addParameterListener (params::gain, this);
+    rememberGain ((int) apvts.getRawParameterValue (params::gain)->load());
     slots[0] = slots[1] = presets.capture();
 }
 
@@ -14,6 +16,13 @@ N73Processor::~N73Processor()
 {
     cancelPendingUpdate();
     apvts.removeParameterListener (params::quality, this);
+    apvts.removeParameterListener (params::gain, this);
+}
+
+void N73Processor::rememberGain (int index)
+{
+    index = juce::jlimit (0, n73::numGainPositions - 1, index);
+    (n73::isLineIndex (index) ? lastLineIndex : lastMicIndex).store (index);
 }
 
 bool N73Processor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -31,7 +40,11 @@ void N73Processor::prepareToPlay (double sampleRate, int samplesPerBlock)
     setLatencySamples (engine.latencySamples (apvts.getRawParameterValue (params::quality)->load() > 0.5f));
 }
 
-void N73Processor::parameterChanged (const juce::String&, float) { triggerAsyncUpdate(); }
+void N73Processor::parameterChanged (const juce::String& id, float v)
+{
+    if (id == params::gain) rememberGain ((int) std::lround (v));
+    else triggerAsyncUpdate();
+}
 
 void N73Processor::handleAsyncUpdate()
 {
@@ -81,6 +94,8 @@ void N73Processor::getStateInformation (juce::MemoryBlock& dest)
     auto state = apvts.copyState();
     slots[activeSlot] = presets.capture();
     state.setProperty ("activeSlot", activeSlot, nullptr);
+    state.setProperty ("lastMic", lastMicIndex.load(), nullptr);
+    state.setProperty ("lastLine", lastLineIndex.load(), nullptr);
     for (int s = 0; s < 2; ++s)
     {
         juce::ValueTree t ("Slot" + juce::String (s));
@@ -105,6 +120,10 @@ void N73Processor::setStateInformation (const void* data, int size)
     }
     activeSlot = juce::jlimit (0, 1, (int) state.getProperty ("activeSlot", 0));
     apvts.replaceState (state);
+    // après replaceState : la position restaurée vient de mettre à jour une des deux mémoires
+    rememberGain ((int) state.getProperty ("lastMic", n73::defaultMicIndex));
+    rememberGain ((int) state.getProperty ("lastLine", n73::defaultLineIndex));
+    rememberGain ((int) apvts.getRawParameterValue (params::gain)->load());
     if (slots[0].empty()) slots[0] = presets.capture();
     if (slots[1].empty()) slots[1] = presets.capture();
     triggerAsyncUpdate();

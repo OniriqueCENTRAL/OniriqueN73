@@ -50,13 +50,13 @@
   MIC  75 dB : mesuré 74.58 dB
   MIC  80 dB : mesuré 79.58 dB
   MIC 40, MIC Z HI (1200 Ω) : 39.58 dB
-  MIC 40, MIC Z LO (300 Ω)  : 43.03 dB
+  MIC 40, MIC Z LO (300 Ω)  : 43.11 dB
 
 == Réponse en fréquence du préampli (EQ hors circuit, HPF OFF, -30 dBu en sortie) ==
   LINE 0  48 kHz :  5.00:-6.28  6.00:-3.36  7.00:-1.47  10.00:0.45  15.00:0.50  20.00:0.34  30.00:0.16  50.00:0.06  100.00:0.02  1000.00:0.00  5000.00:0.00  10000.00:0.01  15000.00:0.01  20000.00:0.02
-  MIC 50  48 kHz :  5.00:-6.91  6.00:-3.80  7.00:-1.81  10.00:0.28  15.00:0.43  20.00:0.29  30.00:0.14  50.00:0.05  100.00:0.01  1000.00:0.00  5000.00:0.02  10000.00:0.10  15000.00:0.26  20000.00:0.52
+  MIC 50  48 kHz :  5.00:-6.90  6.00:-3.80  7.00:-1.80  10.00:0.28  15.00:0.43  20.00:0.29  30.00:0.14  50.00:0.05  100.00:0.01  1000.00:0.00  5000.00:0.02  10000.00:0.10  15000.00:0.26  20000.00:0.52
   LINE 0  96 kHz :  5.00:-6.28  6.00:-3.36  7.00:-1.47  10.00:0.45  15.00:0.50  20.00:0.34  30.00:0.16  50.00:0.06  100.00:0.02  1000.00:0.00  5000.00:0.00  10000.00:0.01  15000.00:0.01  20000.00:0.02
-  MIC 50  96 kHz :  5.00:-6.91  6.00:-3.80  7.00:-1.81  10.00:0.28  15.00:0.43  20.00:0.29  30.00:0.14  50.00:0.05  100.00:0.01  1000.00:0.00  5000.00:0.02  10000.00:0.10  15000.00:0.26  20000.00:0.52
+  MIC 50  96 kHz :  5.00:-6.90  6.00:-3.80  7.00:-1.80  10.00:0.28  15.00:0.43  20.00:0.29  30.00:0.14  50.00:0.05  100.00:0.01  1000.00:0.00  5000.00:0.02  10000.00:0.10  15000.00:0.26  20000.00:0.52
 
 == Distorsion selon le niveau de sortie (LINE 0, EQ à plat, 96 kHz) ==
   1000.00 Hz
@@ -96,7 +96,7 @@
     +28 dBu : DHT    3.5898 %  H2    1.8285 %  H3    2.7551 %  H4    1.1066 %  H5    0.8047 %  (sortie 27.9 dBu)
     +30 dBu : DHT    8.3370 %  H2    3.3990 %  H3    7.2119 %  H4    1.9287 %  H5    1.3960 %  (sortie 29.1 dBu)
 
-  MIC 80, entrée à -60 dBu (sortie visée +20 dBu), 1 kHz : DHT 0.03759 % H2 0.00258 % H3 0.03746 %
+  MIC 80, entrée à -60 dBu (sortie visée +20 dBu), 1 kHz : DHT 0.03762 % H2 0.00288 % H3 0.03747 %
 
 == Écrêtage : niveau de sortie à 1 % et 3 % de DHT (LINE 0, 1 kHz et 50 Hz) ==
   1000.0 Hz : 1 % à +26.5 dBu, 3 % à +28.5 dBu
@@ -119,26 +119,46 @@
   96.00 kHz qualité haute : latence déclarée 4 éch., retard de phase à 1 kHz 4.19 éch.
 
 == CPU : 20 s stéréo, blocs de 128, réglages typiques (EQ actif, HPF 80, MIC 60) ==
-  44.10 kHz normal        : 2.64 % d'un cœur (76.531 µs par bloc)
-  44.100 kHz qualité haute : 5.21 % d'un cœur (151.241 µs par bloc)
-  48.000 kHz normal        : 2.87 % d'un cœur (76.551 µs par bloc)
-  48.000 kHz qualité haute : 5.69 % d'un cœur (151.688 µs par bloc)
-  96.000 kHz normal        : 2.77 % d'un cœur (36.992 µs par bloc)
-  96.000 kHz qualité haute : 5.74 % d'un cœur (76.498 µs par bloc)
-  48 kHz, trois potards en mouvement permanent : 3.00 % d'un cœur
+  44.10 kHz normal        : 2.91 % d'un cœur (84.385 µs par bloc)
+  44.100 kHz qualité haute : 5.75 % d'un cœur (167.039 µs par bloc)
+  48.000 kHz normal        : 3.16 % d'un cœur (84.395 µs par bloc)
+  48.000 kHz qualité haute : 6.27 % d'un cœur (167.183 µs par bloc)
+  96.000 kHz normal        : 3.08 % d'un cœur (41.058 µs par bloc)
+  96.000 kHz qualité haute : 6.32 % d'un cœur (84.284 µs par bloc)
+  48 kHz, trois potards en mouvement permanent : 2.97 % d'un cœur
+  48 kHz, saturation forte (MIC 30, bruit à -20 dBFS) : 3.63 % d'un cœur
 
 == Robustesse : fréquences, tailles de blocs, réglages au hasard, NaN / inf en entrée ==
-  42 / 42 configurations sans valeur non finie ni emballement (pic le plus haut 39.9 dBFS, réglages extrêmes compris)
+  42 / 42 configurations sans valeur non finie ni emballement (pic le plus haut 22.9 dBFS, réglages extrêmes compris)
 
 == Clics : sinus 1 kHz à 0 dBu, changements de commutateurs toutes les 100 ms ==
-  dérivée seconde max, sans changement : 0.00205 ; avec changements : 0.00595 (rapport 2.90)
+  dérivée seconde max, sans changement : 0.00205 ; avec changements : 0.00639 (rapport 3.11)
 
-== Coût de chaque composant (ns par échantillon, 96 kHz, signal musical à 0 dBu) ==
-  transformateur (ligne)            20.9 ns
-  transformateur (sortie, polarisé)20.9 ns
-  étage BA283 NV                   5.7 ns
-  étage de sortie + LO1166         32.8 ns
-  réseau HIGH / LOW (7 mémoires)  12.3 ns
-  réseau MID (3 mémoires)         12.5 ns
-  biquad                            2.4 ns
-  module complet, un canal          138.7 ns
+== Saturation selon le gain : sinus à -18 dBFS efficace, 0 dBFS = +26 dBu (comme UAD), 48 kHz ==
+  100.00 Hz
+    LINE   0 : DHT  0.00614 %  H2  0.00366 %  H3  0.00493 %  sortie -18.0 dBFS
+    LINE   5 : DHT  0.01695 %  H2  0.00645 %  H3  0.01568 %  sortie -13.0 dBFS
+    LINE  10 : DHT  0.05957 %  H2  0.00404 %  H3  0.05911 %  sortie -8.0 dBFS
+    LINE  15 : DHT   1.0738 %  H2   0.4659 %  H3   0.8805 %  sortie -3.2 dBFS
+    LINE  20 : DHT  11.2897 %  H2   1.5498 %  H3  11.0432 %  sortie 0.2 dBFS
+    MIC   20 : DHT  11.2928 %  H2   1.5725 %  H3  11.0431 %  sortie 0.2 dBFS
+    MIC   25 : DHT  25.8409 %  H2   2.0045 %  H3  24.6377 %  sortie 1.2 dBFS
+    MIC   30 : DHT  35.2092 %  H2   3.6114 %  H3  30.3037 %  sortie 1.5 dBFS
+    MIC   35 : DHT  40.1030 %  H2   3.2993 %  H3  32.3260 %  sortie 1.6 dBFS
+    MIC   40 : DHT  42.0326 %  H2   2.7705 %  H3  33.0192 %  sortie 1.6 dBFS
+  1000.0 Hz
+    LINE   0 : DHT  0.00469 %  H2  0.00170 %  H3  0.00437 %  sortie -18.4 dBFS
+    LINE   5 : DHT  0.01421 %  H2  0.00297 %  H3  0.01390 %  sortie -13.4 dBFS
+    LINE  10 : DHT  0.05096 %  H2  0.00019 %  H3  0.05076 %  sortie -8.4 dBFS
+    LINE  15 : DHT   0.8417 %  H2   0.3717 %  H3   0.6879 %  sortie -3.5 dBFS
+    LINE  20 : DHT  10.0395 %  H2   1.3889 %  H3   9.7834 %  sortie 0.1 dBFS
+    MIC   20 : DHT  10.0433 %  H2   1.3914 %  H3   9.7871 %  sortie 0.1 dBFS
+    MIC   25 : DHT  24.8431 %  H2   1.5073 %  H3  23.8670 %  sortie 1.2 dBFS
+    MIC   30 : DHT  34.5433 %  H2   3.3658 %  H3  29.9523 %  sortie 1.5 dBFS
+    MIC   35 : DHT  39.4812 %  H2   2.7174 %  H3  32.0867 %  sortie 1.6 dBFS
+    MIC   40 : DHT  41.3224 %  H2   1.7760 %  H3  32.7896 %  sortie 1.5 dBFS
+
+  fader (LEVEL) avant l'ampli de sortie : LINE 0, sinus 1 kHz à -8 dBFS efficace (+18 dBu)
+    fader   0 dB : DHT  0.05096 %  sortie -8.4 dBFS
+    fader   5 dB : DHT   0.8378 %  sortie -3.5 dBFS
+    fader  10 dB : DHT  10.0387 %  sortie 0.1 dBFS

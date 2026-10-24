@@ -44,8 +44,8 @@ public:
     void selectSlot (int slot);
     void copyActiveToOther();
 
-    /** dérive de l'étage de sortie (0 = repos, 1 = butée), pour le témoin. */
-    float getDrive() const { return engine.drive(); }
+    /** dernière position du gain dans la plage MIC ou LINE : clic sur MIC ou LINE, comme sur le plugin UAD. */
+    int lastGainIndex (bool mic) const { return mic ? lastMicIndex.load() : lastLineIndex.load(); }
     int getLatency() const { return getLatencySamples(); }
     double getWorkingRate() const { return engine.workingRate (apvts.getRawParameterValue (params::quality)->load() > 0.5f); }
 
@@ -64,6 +64,8 @@ private:
     n73::Engine engine;
     std::map<juce::String, float> slots[2];
     int activeSlot = 0;
+    std::atomic<int> lastMicIndex { n73::defaultMicIndex }, lastLineIndex { n73::defaultLineIndex };
+    void rememberGain (int index);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (N73Processor)
 };

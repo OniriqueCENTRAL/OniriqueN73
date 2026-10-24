@@ -6,9 +6,10 @@
 //==============================================================================
 //  Paramètres du N73 : identifiants stables (ne jamais les renommer, les projets les retrouvent par là).
 //
-//  Façade du 1073 : gain, MIC Z, HIGH, MID (fréquence + gain), LOW (fréquence + gain), HIGH PASS, EQL, PHASE,
-//  OUTPUT (le réglage de niveau des racks AMS, après l'EQ, avant l'ampli de sortie : 0 dB = gain unité).
-//  Présentation UA, hors module : PAD, fader de console, POWER.
+//  Façade du 1073 : gain (LINE et MIC, chacun sa plage, comme sur le plugin UAD), MIC Z, HIGH, MID (fréquence + gain),
+//  LOW (fréquence + gain), HIGH PASS, EQL, PHASE.
+//  Présentation UA : PAD (entrée micro), fader de console (LEVEL : avant l'ampli de sortie, au-dessus de 0 dB il le
+//  fait saturer), OUTPUT (volume propre après le module), POWER.
 //  Réglages modernes (roue crantée) : CAL, LEVEL MATCH, qualité.
 //==============================================================================
 namespace params
@@ -119,10 +120,9 @@ struct Reader
         m.hpf = juce::jlimit (0, 4, (int) hpf->load());
         m.eqIn = eql->load() > 0.5f;
         m.phase = phase->load() > 0.5f;
-        m.outputDb = 0.0;                  // OUTPUT agit après le module (volume propre)
-        p.outputDb = output->load();
+        m.levelDb = fader->load();         // fader : avant l'ampli de sortie
+        p.outputDb = output->load();       // OUTPUT : après le module (volume propre)
         m.calDbu = 18.0 + 2.0 * juce::jlimit (0, 4, (int) cal->load());
-        p.faderDb = fader->load();
         p.levelMatch = levelMatch->load() > 0.5f;
         p.power = power->load() > 0.5f;
         p.highQuality = quality->load() > 0.5f;

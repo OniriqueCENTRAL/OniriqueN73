@@ -11,7 +11,6 @@ struct EngineParams
 {
     ModuleConfig module;
     double outputDb = 0.0;     // OUTPUT : volume après le module, sans effet sur la saturation (comme le plugin UAD)
-    double faderDb = 0.0;      // fader de console, propre (après le module)
     bool levelMatch = false;   // compense le gain nominal (comparaisons A/B à niveau égal)
     bool power = true;
     bool highQuality = false;  // suréchantillonnage ×4 au lieu de ×2 (×2 au lieu de ×1 à 88,2 kHz et plus)
@@ -19,7 +18,7 @@ struct EngineParams
 
 //==============================================================================
 //  Le moteur : suréchantillonnage, lissage des réglages, fondus enchaînés quand la structure change (commutateurs),
-//  fader, compensation de niveau, POWER. Aucune allocation dans process().
+//  gain sur OFF, compensation de niveau, POWER. Aucune allocation dans process().
 //==============================================================================
 class Engine
 {
@@ -67,12 +66,21 @@ public:
 
     double workingRate (bool highQuality) const { return fs * (double) (1 << osFactorLog2 (highQuality)); }
 
-    void process (juce::AudioBuffer<float>& buffer, const EngineParams& p)
+    void process (juce::AudioBuffer<float>& buffer, const EngineParams& requested)
     {
         juce::ScopedNoDenormals noDenormals;
         const int n = buffer.getNumSamples();
         const int nch = juce::jmin (channels, buffer.getNumChannels());
         if (n <= 0 || nch <= 0) return;
+
+        // gain sur OFF : le traitement s'arrête et le son passe tel quel, comme sur le plugin UAD (le matériel, lui,
+        // coupe le son). Le module garde la dernière position, pour repartir sans saut.
+        auto p = requested;
+        p.module.gainIndex = juce::jlimit (0, numGainPositions - 1, p.module.gainIndex);
+        const bool gainOff = gainPositions[p.module.gainIndex].kind == GainPosition::Off;
+        if (gainOff) p.module.gainIndex = liveGainIndex;
+        else liveGainIndex = p.module.gainIndex;
+        const bool on = p.power && ! gainOff;
 
         const int q = p.highQuality ? 1 : 0;
         if (q != quality || ! configured)
@@ -86,11 +94,10 @@ public:
             potHigh.setCurrentAndTargetValue (p.module.highPos);
             potMid.setCurrentAndTargetValue (p.module.midPos);
             potLow.setCurrentAndTargetValue (p.module.lowPos);
-            outDb.reset (rate, 0.03); outDb.setCurrentAndTargetValue (p.module.outputDb);
-            fader.reset (fs, 0.03); fader.setCurrentAndTargetValue (dbToGain (p.faderDb));
+            levelDb.reset (rate, 0.03); levelDb.setCurrentAndTargetValue (p.module.levelDb);
             outTrim.reset (fs, 0.03); outTrim.setCurrentAndTargetValue (dbToGain (p.outputDb));
             match.reset (fs, 0.05); match.setCurrentAndTargetValue (1.0f); inPow = outPow = 0.0; matchTarget = 1.0f;
-            wet.reset (fs, 0.02); wet.setCurrentAndTargetValue (p.power ? 1.0f : 0.0f);
+            wet.reset (fs, 0.02); wet.setCurrentAndTargetValue (on ? 1.0f : 0.0f);
             if (os[q] != nullptr) os[q]->reset();
         }
 
@@ -111,7 +118,7 @@ public:
         }
         delayPos = (delayPos + n) & 63;
 
-        wet.setTargetValue (p.power ? 1.0f : 0.0f);
+        wet.setTargetValue (on ? 1.0f : 0.0f);
         const bool wetSilent = ! wet.isSmoothing() && wet.getCurrentValue() == 0.0f;
 
         if (! wetSilent)
@@ -134,12 +141,11 @@ public:
             if (inPow > 1.0e-9 && outPow > 1.0e-12)
                 matchTarget = (float) juce::jlimit (0.0316, 31.6, std::sqrt (inPow / outPow));
         }
-        fader.setTargetValue (dbToGain (p.faderDb));
         outTrim.setTargetValue (dbToGain (p.outputDb));
         match.setTargetValue (p.levelMatch ? matchTarget : 1.0f);
         for (int i = 0; i < n; ++i)
         {
-            const float g = fader.getNextValue() * outTrim.getNextValue() * match.getNextValue();
+            const float g = outTrim.getNextValue() * match.getNextValue();
             const float w = wet.getNextValue();
             for (int c = 0; c < nch; ++c)
             {
@@ -186,7 +192,7 @@ private:
         potHigh.setTargetValue (p.module.highPos);
         potMid.setTargetValue (p.module.midPos);
         potLow.setTargetValue (p.module.lowPos);
-        outDb.setTargetValue (p.module.outputDb);
+        levelDb.setTargetValue (p.module.levelDb);
 
         float peak = 0.0f;
         constexpr int sub = 32;
@@ -194,13 +200,13 @@ private:
         {
             const int len = juce::jmin (sub, un - start);
             // réglages continus, à la cadence de 32 échantillons
-            const double h = potHigh.skip (len), m = potMid.skip (len), l = potLow.skip (len), od = outDb.skip (len);
+            const double h = potHigh.skip (len), m = potMid.skip (len), l = potLow.skip (len), lv = levelDb.skip (len);
             const int targets[2] = { active, 1 - active };
             for (int k = 0; k < (fading ? 2 : 1); ++k)
             {
                 auto& mod = modules[targets[k]];
                 mod.setPots (h, m, l);
-                if (mod.config().outputDb != od) mod.setOutputDb (od);
+                if (mod.config().levelDb != lv) mod.setLevelDb (lv);
             }
             for (int c = 0; c < nch; ++c)
             {
@@ -233,18 +239,18 @@ private:
 
     static ModuleConfig withPots (ModuleConfig c, const ModuleConfig& current)
     {
-        c.highPos = current.highPos; c.midPos = current.midPos; c.lowPos = current.lowPos; c.outputDb = current.outputDb;
+        c.highPos = current.highPos; c.midPos = current.midPos; c.lowPos = current.lowPos; c.levelDb = current.levelDb;
         return c;
     }
 
     double fs = 48000.0;
     int channels = 2, maxBlockSize = 512, quality = 0;
     bool configured = false, fading = false, needsReset = false;
-    int active = 0, fadePos = 0, fadeLen = 1;
+    int active = 0, fadePos = 0, fadeLen = 1, liveGainIndex = defaultLineIndex;
     Module modules[2];
     std::unique_ptr<juce::dsp::Oversampling<float>> os[2];
-    juce::SmoothedValue<double> potHigh, potMid, potLow, outDb;
-    juce::SmoothedValue<float> fader, outTrim, match, wet;
+    juce::SmoothedValue<double> potHigh, potMid, potLow, levelDb;
+    juce::SmoothedValue<float> outTrim, match, wet;
     juce::AudioBuffer<float> dry, delayLine;
     int delayPos = 0;
     std::atomic<float> lastDrive { 0.0f };

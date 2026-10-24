@@ -9,7 +9,7 @@
 
 //==============================================================================
 //  L'interface du N73, telle que validée dans Claude Design : module 1073 à gauche (GAIN, HIGH, MID, LOW,
-//  HIGH PASS, EQL / PHASE, témoin), panneau de droite (MIC Z, PAD, fader, OUTPUT, POWER), bandeau du haut
+//  HIGH PASS, EQL / PHASE), panneau de droite (MIC Z, PAD, fader, OUTPUT, POWER), bandeau du haut
 //  (presets, A / B, réglages). Taille de base 600 × 1120, redimensionnable sans déformation.
 //==============================================================================
 class N73Editor : public juce::AudioProcessorEditor
@@ -54,7 +54,8 @@ private:
     ui::BatToggle micZ, pad, power;
     ui::KeyButton eql, phase;
     ui::ConsoleFader fader;
-    ui::DriveLamp lamp;
+    // MIC Z et PAD n'existent que pour l'entrée micro : désactivés quand le gain est sur LINE (comme sur le plugin UAD)
+    juce::ParameterAttachment inputWatch;
     HeaderButton prevPreset, presetName, nextPreset, slotA, slotB, settings;
 
     struct Refresher : juce::Timer

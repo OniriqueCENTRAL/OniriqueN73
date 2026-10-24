@@ -27,6 +27,14 @@ constexpr GainPosition gainPositions[numGainPositions] = {
     { GainPosition::Mic, 75 },  { GainPosition::Mic, 80 },
 };
 
+/** Comme sur le plugin UAD, le gain LINE et le gain MIC sont deux réglages distincts : positions 0 à 7 pour LINE (avec
+    son OFF), 8 à 21 pour MIC (avec le sien). Le bouton reste dans la plage de l'entrée choisie ; on change d'entrée en
+    cliquant MIC ou LINE (le bouton reprend la dernière position de cette entrée) ou une valeur de l'autre plage. */
+constexpr int lastLineIndex = 7;
+constexpr int defaultLineIndex = 4;   // LINE 0
+constexpr int defaultMicIndex = 8;    // MIC 20 : la plus prudente, passer de LINE à MIC fait monter le niveau
+inline bool isLineIndex (int i) noexcept { return i <= lastLineIndex; }
+
 /** Convention de niveau (moderne, documentée) : le signal du DAW est un signal de niveau ligne (CAL), en MIC il entre
     tel quel dans l'entrée micro — comme une source ligne branchée sur le préampli micro. MIC 20 = +20 dB : dès MIC 30,
     les étages et le transformateur d'entrée saturent nettement, comme sur le matériel (et sur le plugin UAD). */
@@ -43,10 +51,10 @@ struct ModuleConfig
     int midFreq = 0, lowFreq = 0, hpf = 0;   // 0 = OFF
     bool eqIn = true;
     bool phase = false;
-    double outputDb = 0.0;
+    double levelDb = 0.0;        // fader de console (LEVEL du plugin UAD), avant l'ampli de sortie ; -80 = coupé
     double calDbu = 18.0;        // 0 dBFS = calDbu (sinus efficace)
 
-    /** ce qui impose de reconstruire le module (fondu enchaîné) : tout sauf les potentiomètres et OUTPUT. */
+    /** ce qui impose de reconstruire le module (fondu enchaîné) : tout sauf les potentiomètres et le fader. */
     bool sameStructure (const ModuleConfig& o) const
     {
         return gainIndex == o.gainIndex && micZHigh == o.micZHigh && pad == o.pad && midFreq == o.midFreq
@@ -75,7 +83,7 @@ inline Transformer::Params micTransformer (bool high, int gainDb)
 {
     Transformer::Params p;
     p.Rs = 150.0;                                             // micro de 150 Ω (hypothèse, documentée)
-    p.RL = high ? (gainDb >= 55 ? 910.0 : 1300.0) : 300.0;   // impédances mesurées par SOS (1073N)
+    p.RL = high ? (gainDb >= 55 ? 600.0 : 1200.0) : 300.0;   // impédances du manuel UAD (HI : 1k2 de 20 à 50, 600 Ω au-delà)
     p.Lm = high ? 10.0 : 2.5;                                 // primaires en série / en parallèle (÷4)
     p.lambdaS = high ? 0.06 : 0.03;                           // en parallèle, chaque enroulement voit toute la tension
     p.lambdaDC = 0.0;
@@ -157,7 +165,8 @@ public:
         off = gp.kind == GainPosition::Off;
         eqIn = c.eqIn; hpfOn = c.hpf > 0; phase = c.phase;
         vFs = vpkFullScale;
-        inScale = (c.pad ? 0.1 : 1.0) * (mic ? std::pow (10.0, -micReferenceDb / 20.0) : 1.0);
+        // PAD n'agit que sur l'entrée micro (comme sur le plugin UAD)
+        inScale = mic ? (c.pad ? 0.1 : 1.0) * std::pow (10.0, -micReferenceDb / 20.0) : 1.0;
 
         const double fs = sampleRate;
         double frontGain = 1.0, nvG = model::nvGain (0.0), g284 = 1.0;
@@ -199,10 +208,11 @@ public:
         out.setParams (op);
         bump.setHighPass (7.2, 0.9, fs, 15.0);            // bosse grave mesurée par SOS (+0,5 dB à 15 Hz, −3 dB à 6 Hz)
         outHf.setLowPass (120000.0, 0.7, fs, 20000.0);
-        outLevel = std::pow (10.0, c.outputDb / 20.0);
+        setLevelDb (c.levelDb);
     }
 
-    void setOutputDb (double db) noexcept { outLevel = std::pow (10.0, db / 20.0); }
+    /** fader avant l'ampli de sortie : au-dessus de 0 dB, il le pousse et le fait saturer (comme sur le plugin UAD). */
+    void setLevelDb (double db) noexcept { level = db <= -80.0 ? 0.0 : std::pow (10.0, db / 20.0); }
 
     inline double process (double x, const eq::SS& ssLfhf, const eq::SS& ssMid, const eq::SS& ssHpf) noexcept
     {
@@ -217,7 +227,7 @@ public:
             v = eq2.process (mid.process (ssMid, v));
         }
         v = hpfOn ? hpf.process (ssHpf, v) : v * eq::hpfFlatGain;
-        v = out.process (v * outLevel);
+        v = out.process (v * level);
         v = outHf.process (bump.process (v));
         if (phase) v = -v;
         if (off) v = 0.0;
@@ -227,7 +237,7 @@ public:
     double drive() const noexcept { return out.lastDrive(); }
 
 private:
-    double sampleRate = 96000.0, vFs = 8.72, inScale = 1.0, preGain = 1.0, outLevel = 1.0;
+    double sampleRate = 96000.0, vFs = 8.72, inScale = 1.0, preGain = 1.0, level = 1.0;
     bool mic = true, off = false, eqIn = true, hpfOn = false, phase = false, use284 = false;
     Transformer t1, t2;
     AmpStage ba284, nv, eq1, eq2;
@@ -263,7 +273,7 @@ public:
         rebuildHpf();
     }
 
-    /** potentiomètres et OUTPUT : sans fondu (valeurs déjà lissées). */
+    /** potentiomètres et fader : sans fondu (valeurs déjà lissées). */
     void setPots (double highPos, double midPos, double lowPos)
     {
         if (highPos == cfg.highPos && midPos == cfg.midPos && lowPos == cfg.lowPos) return;
@@ -271,10 +281,10 @@ public:
         rebuildEq();
     }
 
-    void setOutputDb (double db)
+    void setLevelDb (double db)
     {
-        cfg.outputDb = db;
-        for (auto& x : ch) x.setOutputDb (db);
+        cfg.levelDb = db;
+        for (auto& x : ch) x.setLevelDb (db);
     }
 
     inline double process (int channel, double x) noexcept { return ch[channel].process (x, ssLfhf, ssMid, ssHpf); }

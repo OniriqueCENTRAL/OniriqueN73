@@ -56,10 +56,17 @@ N73Editor::N73Editor (N73Processor& proc)
       eql (p (params::eql), "EQL", true),
       phase (p (params::phase), "PHASE", false),
       fader (p (params::fader), bubble),
-      lamp ([this] { return processor.getDrive(); })
+      inputWatch (p (params::gain), [this] (float v)
+      {
+          const bool mic = ! n73::isLineIndex ((int) std::lround (v));
+          micZ.setEnabled (mic);
+          pad.setEnabled (mic);
+      })
 {
     mid.setMidLow (true);
     low.setMidLow (false);
+    gain.inputMemory = [this] (bool mic) { return processor.lastGainIndex (mic); };
+    inputWatch.sendInitialUpdate();
     {
         int size = 0;
         if (const char* data = BinaryData::getNamedResource ("logo_png", size))
@@ -67,7 +74,7 @@ N73Editor::N73Editor (N73Processor& proc)
     }
 
     for (juce::Component* c : std::initializer_list<juce::Component*> { &gain, &high, &mid, &low, &hpf, &output, &micZ, &pad, &power, &eql, &phase,
-                                &fader, &lamp, &prevPreset, &presetName, &nextPreset, &slotA, &slotB, &settings })
+                                &fader, &prevPreset, &presetName, &nextPreset, &slotA, &slotB, &settings })
         addAndMakeVisible (c);
     addChildComponent (bubble);
 
@@ -216,7 +223,6 @@ void N73Editor::resized()
     eql.setScale (s); phase.setScale (s);
     place (fader, panelCX - 50.0f, faderTop, 100.0f, 662.0f);
     fader.setScale (s);
-    place (lamp, moduleX + 131.0f - 25.0f, moduleY + 956.0f - 25.0f, 50.0f, 50.0f);
 
     place (prevPreset, 282.0f, 29.0f, 28.0f, 34.0f);
     place (presetName, 310.0f, 29.0f, 124.0f, 34.0f);

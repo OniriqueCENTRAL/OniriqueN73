@@ -197,9 +197,9 @@ void testGain()
     for (bool hi : { true, false })
     {
         p.module.micZHigh = hi;
-        const double amp = dbuToFs (60.0 - 40.0);
+        const double amp = dbuToFs (micReferenceDb - 40.0 - 20.0);   // petit signal : sortie vers -20 dBu
         auto y = runSine (p, 48000.0, 1000.0, amp, 0.6);
-        std::cout << "  MIC 40, MIC Z " << (hi ? "HI (1200 Ω)" : "LO (300 Ω) ") << " : " << 20.0 * std::log10 (analyse (y, 48000.0, 1000.0).h1 / amp) + 60.0 << " dB\n";
+        std::cout << "  MIC 40, MIC Z " << (hi ? "HI (1200 Ω)" : "LO (300 Ω) ") << " : " << 20.0 * std::log10 (analyse (y, 48000.0, 1000.0).h1 / amp) << " dB\n";
     }
 }
 
@@ -346,7 +346,8 @@ void testCpu()
             p.highQuality = hq;
             Engine e; e.prepare (fs, 128, 2);
             juce::AudioBuffer<float> buf (2, 128);
-            std::mt19937 rng (1); std::normal_distribution<float> nd (0.0f, 0.1f);
+            // bruit à -80 dBFS : avec 60 dB de gain, la sortie est vers -20 dBFS (un niveau de travail normal)
+            std::mt19937 rng (1); std::normal_distribution<float> nd (0.0f, 1.0e-4f);
             const int blocks = (int) (20.0 * fs / 128);
             double secs = 0;
             for (int b = 0; b < blocks; ++b)
@@ -378,6 +379,23 @@ void testCpu()
         }
         std::cout << "  48 kHz, trois potards en mouvement permanent : " << std::setprecision (2) << 100.0 * secs / 10.0 << " % d'un cœur\n";
     }
+    // pire cas : tous les étages saturés (MIC 30, bruit à -20 dBFS)
+    {
+        auto p = defaults(); p.module.gainIndex = micIndex (30);
+        Engine e; e.prepare (48000.0, 128, 2);
+        juce::AudioBuffer<float> buf (2, 128);
+        std::mt19937 rng (1); std::normal_distribution<float> nd (0.0f, 0.1f);
+        const int blocks = (int) (10.0 * 48000.0 / 128);
+        double secs = 0;
+        for (int b = 0; b < blocks; ++b)
+        {
+            for (int c = 0; c < 2; ++c) for (int i = 0; i < 128; ++i) buf.setSample (c, i, nd (rng));
+            const auto t0 = std::chrono::high_resolution_clock::now();
+            e.process (buf, p);
+            secs += std::chrono::duration<double> (std::chrono::high_resolution_clock::now() - t0).count();
+        }
+        std::cout << "  48 kHz, saturation forte (MIC 30, bruit à -20 dBFS) : " << std::setprecision (2) << 100.0 * secs / 10.0 << " % d'un cœur\n";
+    }
 }
 
 void testRobust()
@@ -403,8 +421,7 @@ void testRobust()
                 p.module.highPos = u (rng); p.module.midPos = u (rng); p.module.lowPos = u (rng);
                 p.module.midFreq = (int) (u (rng) * 7) % 7; p.module.lowFreq = (int) (u (rng) * 5) % 5; p.module.hpf = (int) (u (rng) * 5) % 5;
                 p.module.eqIn = u (rng) > 0.2; p.module.phase = u (rng) > 0.5;
-                p.module.outputDb = -24 + 36 * u (rng);
-                p.faderDb = -80 + 90 * u (rng);
+                p.module.levelDb = -80 + 90 * u (rng);
                 p.levelMatch = u (rng) > 0.7; p.power = u (rng) > 0.1; p.highQuality = u (rng) > 0.7;
                 for (int c = 0; c < 2; ++c)
                     for (int i = 0; i < block; ++i)
@@ -495,6 +512,17 @@ void testDrive()
                       << std::setw (10) << pct (h.thd) << "  H2 " << std::setw (10) << pct (h.h[1]) << "  H3 " << std::setw (10) << pct (h.h[2])
                       << "  sortie " << std::setprecision (1) << 20.0 * std::log10 (h.h1 / std::sqrt (2.0)) << " dBFS\n";
         }
+    }
+    std::cout << "\n  fader (LEVEL) avant l'ampli de sortie : LINE 0, sinus 1 kHz à -8 dBFS efficace (+18 dBu)\n";
+    for (double level : { 0.0, 5.0, 10.0 })
+    {
+        auto p = defaults();
+        p.module.calDbu = 26.0;
+        p.module.levelDb = level;
+        const auto y = runSine (p, 48000.0, 1000.0, std::pow (10.0, -8.0 / 20.0) * std::sqrt (2.0), 1.0);
+        const auto h = analyse (y, 48000.0, 1000.0);
+        std::cout << "    fader " << std::setprecision (0) << std::setw (3) << level << " dB : DHT " << std::setw (10) << pct (h.thd)
+                  << "  sortie " << std::setprecision (1) << 20.0 * std::log10 (h.h1 / std::sqrt (2.0)) << " dBFS\n";
     }
 }
 
