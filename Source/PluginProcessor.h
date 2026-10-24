@@ -52,7 +52,7 @@ public:
     juce::AudioProcessorValueTreeState apvts;
     N73PresetManager presets { apvts };
 #if N73_LICENCE
-    onirique::license::Guard license { "n73" };
+    onirique::license::Guard license { "onirique-n73" };
 #endif
 
 private:

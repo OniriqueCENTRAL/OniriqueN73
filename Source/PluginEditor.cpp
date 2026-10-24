@@ -210,7 +210,7 @@ void N73Editor::resized()
 
 #if N73_LICENCE
     if (licenseOverlay != nullptr)
-        licenseOverlay->fit (getLocalBounds(), s, { 176, 1096, 248, 22 });
+        licenseOverlay->fit (getLocalBounds(), s, { 176, 1099, 248, 20 });   // la marge sous la carte
 #endif
     renderBackground();
     onirique::window::remember (processor.apvts.state, getWidth(), getHeight());
