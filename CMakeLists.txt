@@ -21,6 +21,8 @@ option(N73_PLUGIN "Compiler le plugin" ON)
 option(N73_TESTS "Compiler le banc de mesure" ON)
 # Licence ONIRIQUE : toujours dans les builds publiés. OFF seulement pour un build d'essai local.
 option(N73_LICENCE "Brancher la licence ONIRIQUE" ON)
+# Build local de captures et de démo (jamais publié) : ONIRIQUE_UI_TEST=nolicense,demo
+option(ONIRIQUE_UI_TEST "Build de captures et de démo" OFF)
 
 if(N73_PLUGIN)
     set(N73_FORMATS VST3)
@@ -66,6 +68,10 @@ if(N73_PLUGIN)
         set_target_properties(OniriqueN73LicenseData PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
         target_link_libraries(OniriqueN73 PRIVATE OniriqueN73LicenseData)
         target_compile_definitions(OniriqueN73 PRIVATE N73_LICENCE=0)
+    endif()
+
+    if(ONIRIQUE_UI_TEST)
+        target_compile_definitions(OniriqueN73 PRIVATE ONIRIQUE_UI_TEST=1)
     endif()
 
     target_compile_definitions(OniriqueN73 PUBLIC

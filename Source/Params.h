@@ -56,15 +56,21 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout layout()
                        .withValueFromStringFunction ([] (const String& t) { return t.retainCharacters ("+-.0123456789").getFloatValue(); })));
     };
 
-    choice (gain, "Gain", gainNames(), 17);
+    // build local de démo (jamais publié) : réglages de départ parlants pour le visuel de la boutique
+   #if ONIRIQUE_UI_TEST
+    const bool demo = SystemStats::getEnvironmentVariable ("ONIRIQUE_UI_TEST", {}).contains ("demo");
+   #else
+    const bool demo = false;
+   #endif
+    choice (gain, "Gain", gainNames(), demo ? 18 : 17);
     choice (micZ, "Mic Z", { "LO 300", "HI 1200" }, 1);
     toggle (pad, "Pad", false, "-20 dB", "0 dB");
-    knob (high, "High 12k", -16.0f, 16.0f, 0.0f);
-    choice (midFreq, "Mid Freq", { "OFF", "0.36 kHz", "0.7 kHz", "1.6 kHz", "3.2 kHz", "4.8 kHz", "7.2 kHz" }, 0);
-    knob (mid, "Mid", -18.0f, 18.0f, 0.0f);
-    choice (lowFreq, "Low Freq", { "OFF", "35 Hz", "60 Hz", "110 Hz", "220 Hz" }, 0);
-    knob (low, "Low", -16.0f, 16.0f, 0.0f);
-    choice (hpf, "High Pass", { "OFF", "50 Hz", "80 Hz", "160 Hz", "300 Hz" }, 0);
+    knob (high, "High 12k", -16.0f, 16.0f, demo ? 4.0f : 0.0f);
+    choice (midFreq, "Mid Freq", { "OFF", "0.36 kHz", "0.7 kHz", "1.6 kHz", "3.2 kHz", "4.8 kHz", "7.2 kHz" }, demo ? 4 : 0);
+    knob (mid, "Mid", -18.0f, 18.0f, demo ? 3.0f : 0.0f);
+    choice (lowFreq, "Low Freq", { "OFF", "35 Hz", "60 Hz", "110 Hz", "220 Hz" }, demo ? 3 : 0);
+    knob (low, "Low", -16.0f, 16.0f, demo ? -2.0f : 0.0f);
+    choice (hpf, "High Pass", { "OFF", "50 Hz", "80 Hz", "160 Hz", "300 Hz" }, demo ? 2 : 0);
     toggle (eql, "EQL", true, "IN", "OUT");
     toggle (phase, "Phase", false, "180", "0");
     l.add (std::make_unique<AudioParameterFloat> (ParameterID { output, 1 }, "Output", NormalisableRange<float> (-24.0f, 12.0f, 0.01f), 0.0f,

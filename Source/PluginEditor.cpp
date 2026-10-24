@@ -139,6 +139,10 @@ N73Editor::N73Editor (N73Processor& proc)
 #if N73_LICENCE
     licenseOverlay = std::make_unique<onirique::license::Overlay> (pluginName, processor.license);
     addAndMakeVisible (*licenseOverlay);
+   #if ONIRIQUE_UI_TEST
+    if (juce::SystemStats::getEnvironmentVariable ("ONIRIQUE_UI_TEST", {}).contains ("nolicense"))
+        licenseOverlay->setVisible (false);
+   #endif
 #endif
 
     setResizable (true, true);
@@ -146,6 +150,11 @@ N73Editor::N73Editor (N73Processor& proc)
     getConstrainer()->setFixedAspectRatio ((double) baseWidth / (double) baseHeight);
     const auto size = onirique::window::openingSize (processor.apvts.state, pluginName, { 480, 896 }, { 360, 672 }, { 900, 1680 });
     setSize (size.x, juce::roundToInt ((float) size.x * (float) baseHeight / (float) baseWidth));
+   #if ONIRIQUE_UI_TEST
+    // démo de la boutique : toujours à la taille de base, quel que soit l'écran
+    if (juce::SystemStats::getEnvironmentVariable ("ONIRIQUE_UI_TEST", {}).contains ("demo"))
+        setSize (baseWidth, baseHeight);
+   #endif
     refresher.startTimerHz (4);
 
     // essais locaux : ONIRIQUE_UI_PNG=fichier → l'interface s'écrit elle-même en PNG (rendu logiciel)
