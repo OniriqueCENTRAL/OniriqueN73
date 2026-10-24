@@ -27,9 +27,10 @@ constexpr GainPosition gainPositions[numGainPositions] = {
     { GainPosition::Mic, 75 },  { GainPosition::Mic, 80 },
 };
 
-/** Convention de niveau (moderne, documentée) : en MIC, le signal numérique est lu comme un signal de micro
-    60 dB sous le niveau ligne — MIC 60 ≈ gain unité, au-delà le préampli est poussé. */
-constexpr double micReferenceDb = 60.0;
+/** Convention de niveau (moderne, documentée) : le signal du DAW est un signal de niveau ligne (CAL), en MIC il entre
+    tel quel dans l'entrée micro — comme une source ligne branchée sur le préampli micro. MIC 20 = +20 dB : dès MIC 30,
+    les étages et le transformateur d'entrée saturent nettement, comme sur le matériel (et sur le plugin UAD). */
+constexpr double micReferenceDb = 0.0;
 
 //==============================================================================
 /** Réglages d'un module, déjà convertis (positions de potentiomètres 0 … 1, 0 = accentuation maximale). */
@@ -106,6 +107,17 @@ inline AmpStage::Params nvStage (double gain)
     return p;
 }
 
+// BA284, ampli d'entrée (mêmes 3 transistors que la BA283 NV, mêmes 24 V) : butées du même ordre
+inline AmpStage::Params ba284Stage (double gain)
+{
+    AmpStage::Params p;
+    p.gain = gain;
+    p.hd2 = 1.5e-4; p.hd3 = 2.0e-4; p.vRef = 10.0;
+    p.vPos = 10.5; p.vNeg = 7.5;
+    p.fEmph = 7000.0; p.emph = 3.0; p.fCouple = 1.0;
+    return p;
+}
+
 inline AmpStage::Params eqAmp()
 {
     AmpStage::Params p;
@@ -125,14 +137,14 @@ public:
     void prepare (double fs)
     {
         sampleRate = fs;
-        t1.prepare (fs); t2.prepare (fs); nv.prepare (fs); eq1.prepare (fs); eq2.prepare (fs); out.prepare (fs);
+        t1.prepare (fs); t2.prepare (fs); ba284.prepare (fs); nv.prepare (fs); eq1.prepare (fs); eq2.prepare (fs); out.prepare (fs);
         dc.setHighPass (1.0, fs);
         reset();
     }
 
     void reset()
     {
-        t1.reset(); t2.reset(); nv.reset(); eq1.reset(); eq2.reset(); out.reset();
+        t1.reset(); t2.reset(); ba284.reset(); nv.reset(); eq1.reset(); eq2.reset(); out.reset();
         dc.reset(); t1Hf.reset(); t2Hf.reset(); outHf.reset(); bump.reset();
         lfhf.reset(); mid.reset(); hpf.reset();
     }
@@ -171,8 +183,11 @@ public:
         const double rest = nvG * eq::hpfFlatGain * model::outGain * model::load / (model::load + model::outZ);
         const double wanted = std::pow (10.0, gp.gainDb / 20.0);
         double trim = wanted / (frontGain * rest);
-        if (mic && gp.gainDb >= 55) { g284 = trim; trim = 1.0; }   // BA284 : l'étage d'entrée en plus, au-delà de 50 dB
-        preGain = g284 * trim;   // positions 20 à 35 : atténuateur avant la BA283 (trim < 1) ; ligne : atténuateur
+        // BA284 : l'étage d'entrée en plus, au-delà de 50 dB — un vrai étage, qui écrête quand on le pousse
+        use284 = mic && gp.gainDb >= 55;
+        if (use284) { g284 = trim; trim = 1.0; }
+        preGain = trim;   // positions 20 à 35 : atténuateur avant la BA283 (trim < 1) ; ligne : atténuateur
+        ba284.setParams (model::ba284Stage (g284));
 
         nv.setParams (model::nvStage (nvG));
         eq1.setParams (model::eqAmp());
@@ -194,6 +209,7 @@ public:
         double v = dc.process (x * vFs) * inScale;
         if (mic) v = t1Hf.process (t1.process (v));
         else     v = t2Hf.process (t2.process (v));
+        if (use284) v = ba284.process (v);
         v = nv.process (v * preGain);
         if (eqIn)
         {
@@ -212,9 +228,9 @@ public:
 
 private:
     double sampleRate = 96000.0, vFs = 8.72, inScale = 1.0, preGain = 1.0, outLevel = 1.0;
-    bool mic = true, off = false, eqIn = true, hpfOn = false, phase = false;
+    bool mic = true, off = false, eqIn = true, hpfOn = false, phase = false, use284 = false;
     Transformer t1, t2;
-    AmpStage nv, eq1, eq2;
+    AmpStage ba284, nv, eq1, eq2;
     OutputStage out;
     OnePole dc;
     Biquad t1Hf, t2Hf, outHf, bump;

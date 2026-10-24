@@ -31,8 +31,9 @@ publiées et des mesures publiées par des tiers.
    bilinéaire précompensée, `dsp/LinearCircuit.h`, `dsp/EqNetworks.h`) autour des amplis de la BA284 ;
    les potentiomètres agissent sur les vraies résistances, d'où les formes qui changent avec le réglage.
 5. **HIGH PASS** — réseau passif C–L–C (B182, bobine T1295), source 1k2, charge 5k1 : simulé comme circuit.
-6. **OUTPUT** — après l'EQ, avant l'ampli de sortie (comme sur les racks AMS : 0 dB = gain unité).
-   Au-delà de 0 dB (jusqu'à +12), extension moderne : l'étage de sortie est attaqué plus fort.
+6. **OUTPUT** — volume après le module, sans effet sur la saturation (comme sur le plugin UAD et selon le cahier
+   des charges : le gain règle le grain, OUTPUT le niveau). Sur les racks AMS, le réglage équivalent est avant l'ampli de
+   sortie ; il n'est pas reproduit à cet endroit.
 7. **BA283 AM + LO1166** (`dsp/OutputStage.h`) — 2N3055 en classe A à un transistor : butée de blocage quand le
    courant demandé (charge + courant magnétisant) atteint le courant de repos, plus tôt dans le grave ; saturation de
    l'autre côté ; transformateur à entrefer polarisé (harmoniques paires dans le grave).
@@ -66,6 +67,11 @@ publiées et des mesures publiées par des tiers.
 
 ## Commandes modernes (hors 1073)
 
-PAD (présentation UA), fader de console, POWER, CAL (0 dBFS = +18 / +20 / +22 / +24 dBu), LEVEL MATCH
-(compense le gain nominal, ±30 dB au plus), qualité haute (×4), OUTPUT au-delà de 0 dB.
-En MIC, le signal numérique est lu 60 dB sous le niveau ligne : MIC 60 ≈ gain unité.
+PAD (présentation UA), fader de console, POWER, OUTPUT, CAL (0 dBFS = +18 … +26 dBu, +26 par défaut : l'alignement
+prêté aux plugins UAD), LEVEL MATCH (le volume de sortie suit celui de l'entrée, moyennes sur 300 ms, ±30 dB),
+qualité haute (×4).
+
+**Convention de niveau** : le signal du DAW est de niveau ligne ; en MIC il entre tel quel dans l'entrée micro, comme
+une source ligne branchée sur un vrai préampli micro (et comme sur le plugin UAD). Avec une voix à −18 dBFS : LINE 0
+à +10 propres, LINE +15 ≈ 1 % de distorsion, LINE +20 et MIC 20 ≈ 10 %, MIC 30 ≈ 35 % (étages saturés en cascade :
+BA284, BA283, sortie). Mesure : `N73Bench drive`.

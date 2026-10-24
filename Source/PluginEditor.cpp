@@ -133,8 +133,8 @@ N73Editor::N73Editor (N73Processor& proc)
             g.drawLine ({ ui::polar (c, 4.6f * s, 45.0f * (float) i), ui::polar (c, 6.6f * s, 45.0f * (float) i) }, 1.4f * s);
     };
     settings.onClick = [this] { showSettingsMenu(); };
-    settings.setTitle ("Réglages");
-    prevPreset.setTitle ("Preset précédent"); nextPreset.setTitle ("Preset suivant"); presetName.setTitle ("Presets");
+    settings.setTitle (juce::String (juce::CharPointer_UTF8 ("Réglages")));
+    prevPreset.setTitle (juce::String (juce::CharPointer_UTF8 ("Preset précédent"))); nextPreset.setTitle ("Preset suivant"); presetName.setTitle ("Presets");
 
 #if N73_LICENCE
     licenseOverlay = std::make_unique<onirique::license::Overlay> (pluginName, processor.license);
@@ -145,11 +145,19 @@ N73Editor::N73Editor (N73Processor& proc)
    #endif
 #endif
 
+    // la taille gardée se lit AVANT de poser les limites : setResizeLimits redimensionne déjà l'éditeur, et ce premier
+    // resized() écrasait la taille mémorisée (l'interface revenait à sa taille minimale à chaque ouverture)
+    auto size = onirique::window::openingSize (processor.apvts.state, pluginName, { 480, 896 }, { 360, 672 }, { 900, 1680 });
+    // la 1.0.0 mémorisait toujours la taille minimale (voir ci-dessous) : cette taille-là n'est pas un choix, on repart
+    // de la taille par défaut
+    if (size.x <= 360)
+        size = onirique::window::openingSize ({}, pluginName + " defaut", { 480, 896 }, { 360, 672 }, { 900, 1680 });
     setResizable (true, true);
     setResizeLimits (360, 672, 900, 1680);
     getConstrainer()->setFixedAspectRatio ((double) baseWidth / (double) baseHeight);
-    const auto size = onirique::window::openingSize (processor.apvts.state, pluginName, { 480, 896 }, { 360, 672 }, { 900, 1680 });
     setSize (size.x, juce::roundToInt ((float) size.x * (float) baseHeight / (float) baseWidth));
+    sizeReady = true;
+    onirique::window::remember (processor.apvts.state, getWidth(), getHeight());
    #if ONIRIQUE_UI_TEST
     // démo de la boutique : toujours à la taille de base, quel que soit l'écran
     if (juce::SystemStats::getEnvironmentVariable ("ONIRIQUE_UI_TEST", {}).contains ("demo"))
@@ -222,7 +230,7 @@ void N73Editor::resized()
         licenseOverlay->fit (getLocalBounds(), s, { 176, 1099, 248, 20 });   // la marge sous la carte
 #endif
     renderBackground();
-    onirique::window::remember (processor.apvts.state, getWidth(), getHeight());
+    if (sizeReady) onirique::window::remember (processor.apvts.state, getWidth(), getHeight());
 }
 
 void N73Editor::refreshHeader()
@@ -440,7 +448,7 @@ void N73Editor::showSettingsMenu()
     };
 
     juce::PopupMenu cal;
-    for (int i = 0; i < 4; ++i) cal.addItem (10 + i, "0 dBFS = +" + juce::String (18 + 2 * i) + " dBu", true, choiceIndex (params::cal) == i);
+    for (int i = 0; i < 5; ++i) cal.addItem (10 + i, "0 dBFS = +" + juce::String (18 + 2 * i) + " dBu", true, choiceIndex (params::cal) == i);
     juce::PopupMenu m;
     m.setLookAndFeel (&menuLook);
     m.addSectionHeader (juce::String (juce::CharPointer_UTF8 ("Réglages (modernes, hors matériel)")));
@@ -460,7 +468,7 @@ void N73Editor::showSettingsMenu()
     m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (&settings), [safe, setParam, choiceIndex] (int r)
     {
         if (safe == nullptr || r == 0) return;
-        if (r >= 10 && r < 14) setParam (params::cal, (float) (r - 10));
+        if (r >= 10 && r < 15) setParam (params::cal, (float) (r - 10));
         else if (r == 20) setParam (params::levelMatch, choiceIndex (params::levelMatch) == 1 ? 0.0f : 1.0f);
         else if (r == 30 || r == 31) setParam (params::quality, (float) (r - 30));
         else if (r == 40) safe->processor.copyActiveToOther();

@@ -10,6 +10,7 @@ namespace n73
 struct EngineParams
 {
     ModuleConfig module;
+    double outputDb = 0.0;     // OUTPUT : volume après le module, sans effet sur la saturation (comme le plugin UAD)
     double faderDb = 0.0;      // fader de console, propre (après le module)
     bool levelMatch = false;   // compense le gain nominal (comparaisons A/B à niveau égal)
     bool power = true;
@@ -87,7 +88,8 @@ public:
             potLow.setCurrentAndTargetValue (p.module.lowPos);
             outDb.reset (rate, 0.03); outDb.setCurrentAndTargetValue (p.module.outputDb);
             fader.reset (fs, 0.03); fader.setCurrentAndTargetValue (dbToGain (p.faderDb));
-            match.reset (fs, 0.05); match.setCurrentAndTargetValue (matchGain (p));
+            outTrim.reset (fs, 0.03); outTrim.setCurrentAndTargetValue (dbToGain (p.outputDb));
+            match.reset (fs, 0.05); match.setCurrentAndTargetValue (1.0f); inPow = outPow = 0.0; matchTarget = 1.0f;
             wet.reset (fs, 0.02); wet.setCurrentAndTargetValue (p.power ? 1.0f : 0.0f);
             if (os[q] != nullptr) os[q]->reset();
         }
@@ -115,12 +117,29 @@ public:
         if (! wetSilent)
             processModule (buffer, nch, n, p);
 
-        // fader, compensation, POWER
+        // LEVEL MATCH : le volume de sortie suit celui de l'entrée (moyennes sur ~300 ms, ±30 dB au plus), pour comparer
+        // le grain à volume égal, saturation comprise
+        if (! wetSilent)
+        {
+            double inSum = 0.0, outSum = 0.0;
+            for (int c = 0; c < nch; ++c)
+            {
+                const auto* d = dry.getReadPointer (c);
+                const auto* s = buffer.getReadPointer (c);
+                for (int i = 0; i < n; ++i) { inSum += (double) d[i] * d[i]; outSum += (double) s[i] * s[i]; }
+            }
+            const double a = 1.0 - std::exp (-(double) n / (0.3 * fs));
+            inPow += a * (inSum / (n * nch) - inPow);
+            outPow += a * (outSum / (n * nch) - outPow);
+            if (inPow > 1.0e-9 && outPow > 1.0e-12)
+                matchTarget = (float) juce::jlimit (0.0316, 31.6, std::sqrt (inPow / outPow));
+        }
         fader.setTargetValue (dbToGain (p.faderDb));
-        match.setTargetValue (matchGain (p));
+        outTrim.setTargetValue (dbToGain (p.outputDb));
+        match.setTargetValue (p.levelMatch ? matchTarget : 1.0f);
         for (int i = 0; i < n; ++i)
         {
-            const float g = fader.getNextValue() * match.getNextValue();
+            const float g = fader.getNextValue() * outTrim.getNextValue() * match.getNextValue();
             const float w = wet.getNextValue();
             for (int c = 0; c < nch; ++c)
             {
@@ -139,16 +158,6 @@ public:
 
 private:
     static float dbToGain (double db) { return db <= -80.0 ? 0.0f : (float) std::pow (10.0, db / 20.0); }
-
-    static float matchGain (const EngineParams& p)
-    {
-        if (! p.levelMatch) return 1.0f;
-        const auto& gp = gainPositions[p.module.gainIndex];
-        if (gp.kind == GainPosition::Off) return 1.0f;
-        const double nominal = gp.kind == GainPosition::Mic ? gp.gainDb - micReferenceDb : gp.gainDb;
-        const double comp = -(nominal + p.module.outputDb + (p.module.pad ? -20.0 : 0.0));
-        return (float) std::pow (10.0, juce::jlimit (-30.0, 30.0, comp) / 20.0);   // au-delà, la comparaison n'a plus de sens
-    }
 
     int osFactorLog2 (bool highQuality) const
     {
@@ -235,9 +244,11 @@ private:
     Module modules[2];
     std::unique_ptr<juce::dsp::Oversampling<float>> os[2];
     juce::SmoothedValue<double> potHigh, potMid, potLow, outDb;
-    juce::SmoothedValue<float> fader, match, wet;
+    juce::SmoothedValue<float> fader, outTrim, match, wet;
     juce::AudioBuffer<float> dry, delayLine;
     int delayPos = 0;
     std::atomic<float> lastDrive { 0.0f };
+    double inPow = 0.0, outPow = 0.0;
+    float matchTarget = 1.0f;
 };
 } // namespace n73

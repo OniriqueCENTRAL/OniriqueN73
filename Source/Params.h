@@ -62,7 +62,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout layout()
    #else
     const bool demo = false;
    #endif
-    choice (gain, "Gain", gainNames(), demo ? 18 : 17);
+    choice (gain, "Gain", gainNames(), demo ? 9 : 4);   // LINE 0 : gain unité
     choice (micZ, "Mic Z", { "LO 300", "HI 1200" }, 1);
     toggle (pad, "Pad", false, "-20 dB", "0 dB");
     knob (high, "High 12k", -16.0f, 16.0f, demo ? 4.0f : 0.0f);
@@ -84,7 +84,8 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout layout()
                        .withStringFromValueFunction ([] (float v, int) { return v <= -79.9f ? String ("-inf") : dbText (v); })));
     }
     toggle (power, "Power", true, "ON", "OFF");
-    choice (cal, "Calibration", { "0 dBFS = +18 dBu", "0 dBFS = +20 dBu", "0 dBFS = +22 dBu", "0 dBFS = +24 dBu" }, 0, false);
+    // +26 dBu : l'alignement des plugins UAD, par défaut (les anciens projets gardent leur index)
+    choice (cal, "Calibration", { "0 dBFS = +18 dBu", "0 dBFS = +20 dBu", "0 dBFS = +22 dBu", "0 dBFS = +24 dBu", "0 dBFS = +26 dBu" }, 4, false);
     toggle (levelMatch, "Level Match", false, "ON", "OFF");
     choice (quality, "Quality", { "Normal", "High" }, 0, false);
     return l;
@@ -118,8 +119,9 @@ struct Reader
         m.hpf = juce::jlimit (0, 4, (int) hpf->load());
         m.eqIn = eql->load() > 0.5f;
         m.phase = phase->load() > 0.5f;
-        m.outputDb = output->load();
-        m.calDbu = 18.0 + 2.0 * juce::jlimit (0, 3, (int) cal->load());
+        m.outputDb = 0.0;                  // OUTPUT agit après le module (volume propre)
+        p.outputDb = output->load();
+        m.calDbu = 18.0 + 2.0 * juce::jlimit (0, 4, (int) cal->load());
         p.faderDb = fader->load();
         p.levelMatch = levelMatch->load() > 0.5f;
         p.power = power->load() > 0.5f;

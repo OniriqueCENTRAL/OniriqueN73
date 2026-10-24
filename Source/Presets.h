@@ -18,18 +18,22 @@ struct N73Preset
 
 inline const std::vector<N73Preset>& factoryPresets()
 {
-    // index du commutateur : LINE +20 = 0 … LINE 0 = 4 … MIC 20 = 8 … MIC 50 = 14, MIC 55 = 16 … MIC 80 = 21
+    // index du commutateur : LINE +20 = 0 … LINE 0 = 4 … MIC 20 = 8, MIC 25 = 9, MIC 30 = 10 …
+    // niveaux pensés pour une voix vers -18 dBFS avec la calibration par défaut (0 dBFS = +26 dBu) : le gain règle le
+    // grain, OUTPUT ramène le volume
+    auto n = [] (const char* s) { return juce::String (juce::CharPointer_UTF8 (s)); };
     static const std::vector<N73Preset> list = {
         { "INIT", {} },
-        { "VOCAL · WARM LEAD", { { params::gain, 18.0f }, { params::hpf, 2.0f }, { params::lowFreq, 3.0f }, { params::low, -2.0f },
-                                 { params::midFreq, 4.0f }, { params::mid, 3.0f }, { params::high, 4.0f }, { params::output, -5.0f } } },
-        { "VOCAL · DRIVEN",    { { params::gain, 20.0f }, { params::hpf, 2.0f }, { params::high, 3.0f }, { params::output, -15.0f } } },
-        { "BASS · GRIT",       { { params::gain, 19.0f }, { params::lowFreq, 2.0f }, { params::low, 4.0f }, { params::midFreq, 2.0f },
-                                 { params::mid, 2.0f }, { params::output, -10.0f } } },
-        { "DRUMS · BUS LINE",  { { params::gain, 2.0f }, { params::lowFreq, 2.0f }, { params::low, 3.0f }, { params::high, 4.0f },
-                                 { params::output, -10.0f } } },
-        { "ACOUSTIC · AIR",    { { params::gain, 17.0f }, { params::hpf, 2.0f }, { params::midFreq, 3.0f }, { params::mid, -2.0f }, { params::high, 5.0f } } },
-        { "LINE · CLEAN",      { { params::gain, 4.0f } } },
+        { n ("VOCAL \xc2\xb7 WARM LEAD"), { { params::gain, 1.0f }, { params::hpf, 2.0f }, { params::lowFreq, 3.0f }, { params::low, -2.0f },
+                                            { params::midFreq, 4.0f }, { params::mid, 3.0f }, { params::high, 4.0f }, { params::output, -15.0f } } },
+        { n ("VOCAL \xc2\xb7 DRIVEN"),    { { params::gain, 9.0f }, { params::hpf, 2.0f }, { params::high, 3.0f }, { params::output, -24.0f } } },
+        { n ("BASS \xc2\xb7 GRIT"),       { { params::gain, 8.0f }, { params::lowFreq, 2.0f }, { params::low, 4.0f }, { params::midFreq, 2.0f },
+                                            { params::mid, 2.0f }, { params::output, -20.0f } } },
+        { n ("DRUMS \xc2\xb7 BUS LINE"),  { { params::gain, 2.0f }, { params::lowFreq, 2.0f }, { params::low, 3.0f }, { params::high, 4.0f },
+                                            { params::output, -10.0f } } },
+        { n ("ACOUSTIC \xc2\xb7 AIR"),    { { params::gain, 3.0f }, { params::hpf, 2.0f }, { params::midFreq, 3.0f }, { params::mid, -2.0f },
+                                            { params::high, 5.0f }, { params::output, -5.0f } } },
+        { n ("LINE \xc2\xb7 CLEAN"),      { { params::gain, 4.0f } } },
     };
     return list;
 }

@@ -476,6 +476,28 @@ void testClicks()
     std::cout << std::setprecision (5) << "  dérivée seconde max, sans changement : " << still << " ; avec changements : " << moving
               << " (rapport " << std::setprecision (2) << moving / still << ")\n";
 }
+void testDrive()
+{
+    std::cout << "\n== Saturation selon le gain : sinus à -18 dBFS efficace, 0 dBFS = +26 dBu (comme UAD), 48 kHz ==\n";
+    for (double f : { 100.0, 1000.0 })
+    {
+        std::cout << "  " << f << " Hz\n";
+        for (int i : { 4, 3, 2, 1, 0, 8, 9, 10, 11, 12 })
+        {
+            auto p = defaults();
+            p.module.gainIndex = i;
+            p.module.calDbu = 26.0;
+            const double amp = std::pow (10.0, -18.0 / 20.0) * std::sqrt (2.0);
+            const auto y = runSine (p, 48000.0, f, amp, 1.0);
+            const auto h = analyse (y, 48000.0, f);
+            const auto& gp = gainPositions[i];
+            std::cout << "    " << (gp.kind == GainPosition::Mic ? "MIC  " : "LINE ") << std::setw (3) << gp.gainDb << " : DHT "
+                      << std::setw (10) << pct (h.thd) << "  H2 " << std::setw (10) << pct (h.h[1]) << "  H3 " << std::setw (10) << pct (h.h[2])
+                      << "  sortie " << std::setprecision (1) << 20.0 * std::log10 (h.h1 / std::sqrt (2.0)) << " dBFS\n";
+        }
+    }
+}
+
 void testProfile()
 {
     std::cout << "\n== Coût de chaque composant (ns par échantillon, 96 kHz, signal musical à 0 dBu) ==\n";
@@ -528,6 +550,7 @@ int main (int argc, char** argv)
     if (want ("cpu")) testCpu();
     if (want ("robust")) testRobust();
     if (want ("clicks")) testClicks();
+    if (want ("drive")) testDrive();
     if (args.contains ("prof")) testProfile();
     return 0;
 }

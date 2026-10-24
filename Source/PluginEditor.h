@@ -65,6 +65,7 @@ private:
     } refresher { *this };
     juce::String shownPreset;
     int shownSlot = -1;
+    bool sizeReady = false;   // la taille d'ouverture est posée : on peut la mémoriser
 
 #if N73_LICENCE
     std::unique_ptr<onirique::license::Overlay> licenseOverlay;

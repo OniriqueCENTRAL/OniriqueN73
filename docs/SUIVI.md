@@ -12,13 +12,14 @@ Dépôt local, sans remote. Aucun push, aucune publication sans accord explicite
   capture de l'interface (`ONIRIQUE_UI_PNG`). Résultats : `docs/MESURES.md`.
 
 ## Reste à faire
-1. Essai dans FL Studio par Nov (build local sans licence : `-DN73_LICENCE=OFF`).
-2. Identifiant de licence dans ONIRIQUE CENTRAL (« n73 » provisoire dans `PluginProcessor.h`), build avec licence.
-3. Build Mac (AU / VST3) et pipeline de publication — seulement avec l'accord de Nov.
-4. Validation contre un vrai 1073 si des mesures ou des prises de référence deviennent disponibles.
+1. Validation contre un vrai 1073 si des mesures ou des prises de référence deviennent disponibles.
+
+Publié : dépôt public OniriqueCENTRAL/OniriqueN73, slug et licence `onirique-n73`, fiche CENTRAL n° 26 (89,99 €,
+9,99 € / mois), démo de la boutique faite avec `ONIRIQUE_UI_TEST=nolicense,demo` et onirique-probe.
 
 ## Décisions
-- Calibration : 0 dBFS = +18 dBu par défaut ; MIC lu 60 dB sous le niveau ligne (MIC 60 ≈ gain unité).
+- Calibration : 0 dBFS = +26 dBu par défaut (alignement UAD) ; MIC = signal ligne dans l'entrée micro (comme UAD) ;
+  OUTPUT = volume après le module (ne change pas la saturation) ; LEVEL MATCH = suivi du volume d'entrée.
 - Suréchantillonnage ×2 à 44,1 / 48 kHz (4 éch. de latence), aucun à 96 kHz ; ×4 en qualité haute.
 - EQ en circuit à plat : −0,4 dB (propriété du réseau), conservé ; gains calés EQ hors circuit (conditions AMS).
 - EQL ne met pas le HIGH PASS hors circuit (S7 ne commute que l'EQ sur le schéma EH10023).
