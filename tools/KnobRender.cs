@@ -285,4 +285,44 @@ public static class KnobRender
         ocap.Paint = Stripe(0, 9, 26, -1.2, 1.2, paint, null);
         Render(new Part[] { ocap }, 100, scale, dir + "\\output.png");
     }
+
+    // Les images du plugin (Resources/knobs) : leviers à chaque cran, pièces tournantes par pas de 1,5° sur une
+    // période de leurs lobes (18°), bague crème seule. Les repères blancs et l'encoche braise sont dessinés par le code.
+    public static void RenderAssets(string dir, double scale)
+    {
+        const string red = "#680e11", smoke = "#4a4c52", smokeDark = "#303036", grey = "#86878d", cream = "#dcd1b5", navy = "#142456", black = "#19181b";
+        const string paint = "#f4f0e8";
+
+        Floor = 0;
+        for (int i = 0; i < 22; ++i)
+        {
+            double a = 45 + 15 * i;
+            Part lever = Lever(a, 59, 12.5, 11, 1.5, red, 0.06);
+            lever.Paint = Stripe(a, 43, 57.5, -1.3, 1.3, paint, null);
+            Render(new Part[] { Turned(Skirt(55.5, 41, 7.5), 0, 0, 0, 0, smoke, 0.08), lever, Turned(RimCap(37, 6, 16), 0, 0, 0, 0, red, 0.06) },
+                   164, scale, dir + "\\gain_" + i.ToString("00") + ".png");
+        }
+        for (int i = 0; i < 5; ++i)
+        {
+            double a = 90 + 30 * i;
+            Part hlever = Lever(a, 54, 14, 10.5, 1.6, navy, 0.06);
+            hlever.Paint = Stripe(a, 39, 53.5, -1.3, 1.3, paint, null);
+            Render(new Part[] { Turned(Skirt(54, 40, 7), 0, 0, 0, 0, smoke, 0.08), hlever, Turned(RimCap(38, 5, 15.5), 0, 0, 0, 0, navy, 0.06) },
+                   148, scale, dir + "\\hpf_" + i + ".png");
+        }
+        Render(new Part[] { Turned(Skirt(48, 36.5, 6.5), 0, 0, 0, 0, smokeDark, 0.08) }, 136, scale, dir + "\\high_base.png");
+        double[] ring = { 54, 0, 54, 5, 53.3, 6, 48, 7.2, 40.6, 8.6, 40.1, 9.5, 39.6, 9.5, 39.2, 7, 38.8, 3, 0, 3 };
+        Render(new Part[] { Turned(ring, 120, 0.6, 0, 48, cream, 0.05) }, 148, scale, dir + "\\ring.png");
+        for (int k = 0; k < 12; ++k)
+        {
+            double rot = 1.5 * k;
+            Floor = 6.7;   // l'ombre du capuchon tombe sur la jupe
+            Render(new Part[] { Turned(GreyCap(35.5, 26.5, 15), 20, 2.1, 1, 28, grey, 0.06, rot) }, 136, scale, dir + "\\high_cap_" + k.ToString("00") + ".png");
+            Floor = 9.0;   // … sur la bague crème
+            Render(new Part[] { Turned(GreyCap(38.5, 27.5, 16), 20, 2.1, 1, 29, grey, 0.06, rot) }, 148, scale, dir + "\\cap_" + k.ToString("00") + ".png");
+            Floor = 0;
+            Render(new Part[] { Turned(GreyCap(27, 18.5, 12), 20, 2.4, 1, 20, black, 0.07, rot) }, 100, scale, dir + "\\out_" + k.ToString("00") + ".png");
+        }
+        Floor = 0;
+    }
 }

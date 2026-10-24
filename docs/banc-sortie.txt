@@ -1,0 +1,144 @@
+
+== EQ : réseaux discrétisés (96 kHz) contre la simulation analogique de référence ==
+                                 20     40    100    200    350   1000   2000   5000  10000  20000
+  gain absolu au centre : 1 kHz -0.487023 dB, 100 Hz -0.025595 dB, 10 kHz -0.631159 dB
+  MID OFF : 1 kHz -0.002989 dB
+  HIGH le plus plat : position 0.478000 (écart max 0.436398 dB)
+  puis LOW le plus plat : position 0.512000 (écart max 20 Hz – 20 kHz 0.383957 dB)
+  plat (potards au centre)      0.5    0.5    0.5    0.4    0.2    0.0   -0.0   -0.1   -0.1   -0.5
+  LOW 60 Hz, maximum           18.8   20.1   14.3    7.1    2.3   -1.2   -0.6   -0.2   -0.2   -0.5
+  LOW 60 Hz, minimum          -17.8  -19.2  -13.6   -6.4   -1.6    1.4    0.6    0.1   -0.1   -0.4
+  HIGH, maximum                 0.5    0.5    0.2   -0.4   -0.9    1.7    5.9   12.0   16.0   17.8
+  HIGH, minimum                 0.5    0.5    0.7    1.1    1.3   -1.6   -5.9  -12.3  -17.1  -20.4
+  LOW OFF (potard au centre)    0.5    0.5    0.5    0.4    0.3    0.0   -0.1   -0.1   -0.2   -0.5
+
+  MID : gain au centre, extrémités du potentiomètre (fiche AMS : ±18 dB)
+      360 Hz : +17.7 dB à 355 Hz, -17.7 dB à 355 Hz
+      700 Hz : +17.7 dB à 700 Hz, -17.7 dB à 700 Hz
+     1600 Hz : +17.8 dB à 1603 Hz, -17.8 dB à 1597 Hz
+     3200 Hz : +17.8 dB à 3232 Hz, -17.8 dB à 3206 Hz
+     4800 Hz : +17.7 dB à 5200 Hz, -17.8 dB à 5158 Hz
+     7200 Hz : +17.7 dB à 7258 Hz, -17.8 dB à 7201 Hz
+
+  HIGH PASS : -3 dB (source 1k2, charge 5k1)
+    position 1 : -3 dB à 39 Hz ; à f/2 : -16.3 dB
+    position 2 : -3 dB à 65 Hz ; à f/2 : -19.4 dB
+    position 3 : -3 dB à 138 Hz ; à f/2 : -21.1 dB
+    position 4 : -3 dB à 274 Hz ; à f/2 : -21.3 dB
+
+== Gain par position (1 kHz, petit signal, EQ en circuit à plat, 48 kHz) ==
+  LINE  20 dB : mesuré 19.58 dB
+  LINE  15 dB : mesuré 14.58 dB
+  LINE  10 dB : mesuré 9.58 dB
+  LINE   5 dB : mesuré 4.58 dB
+  LINE   0 dB : mesuré -0.42 dB
+  LINE  -5 dB : mesuré -5.42 dB
+  LINE -10 dB : mesuré -10.42 dB
+  OFF
+  MIC  20 dB : mesuré 19.58 dB
+  MIC  25 dB : mesuré 24.58 dB
+  MIC  30 dB : mesuré 29.58 dB
+  MIC  35 dB : mesuré 34.58 dB
+  MIC  40 dB : mesuré 39.58 dB
+  MIC  45 dB : mesuré 44.58 dB
+  MIC  50 dB : mesuré 49.58 dB
+  OFF
+  MIC  55 dB : mesuré 54.58 dB
+  MIC  60 dB : mesuré 59.58 dB
+  MIC  65 dB : mesuré 64.58 dB
+  MIC  70 dB : mesuré 69.58 dB
+  MIC  75 dB : mesuré 74.58 dB
+  MIC  80 dB : mesuré 79.58 dB
+  MIC 40, MIC Z HI (1200 Ω) : 39.58 dB
+  MIC 40, MIC Z LO (300 Ω)  : 43.03 dB
+
+== Réponse en fréquence du préampli (EQ hors circuit, HPF OFF, -30 dBu en sortie) ==
+  LINE 0  48 kHz :  5.00:-6.28  6.00:-3.36  7.00:-1.47  10.00:0.45  15.00:0.50  20.00:0.34  30.00:0.16  50.00:0.06  100.00:0.02  1000.00:0.00  5000.00:0.00  10000.00:0.01  15000.00:0.01  20000.00:0.02
+  MIC 50  48 kHz :  5.00:-6.91  6.00:-3.80  7.00:-1.81  10.00:0.28  15.00:0.43  20.00:0.29  30.00:0.14  50.00:0.05  100.00:0.01  1000.00:0.00  5000.00:0.02  10000.00:0.10  15000.00:0.26  20000.00:0.52
+  LINE 0  96 kHz :  5.00:-6.28  6.00:-3.36  7.00:-1.47  10.00:0.45  15.00:0.50  20.00:0.34  30.00:0.16  50.00:0.06  100.00:0.02  1000.00:0.00  5000.00:0.00  10000.00:0.01  15000.00:0.01  20000.00:0.02
+  MIC 50  96 kHz :  5.00:-6.91  6.00:-3.80  7.00:-1.81  10.00:0.28  15.00:0.43  20.00:0.29  30.00:0.14  50.00:0.05  100.00:0.01  1000.00:0.00  5000.00:0.02  10000.00:0.10  15000.00:0.26  20000.00:0.52
+
+== Distorsion selon le niveau de sortie (LINE 0, EQ à plat, 96 kHz) ==
+  1000.00 Hz
+    + 4 dBu : DHT   0.00115 %  H2   0.00076 %  H3   0.00087 %  H4   0.00000 %  H5   0.00000 %  (sortie 3.6 dBu)
+    +10 dBu : DHT   0.00378 %  H2   0.00151 %  H3   0.00347 %  H4   0.00000 %  H5   0.00000 %  (sortie 9.6 dBu)
+    +16 dBu : DHT   0.01418 %  H2   0.00297 %  H3   0.01387 %  H4   0.00003 %  H5   0.00003 %  (sortie 15.6 dBu)
+    +20 dBu : DHT   0.03758 %  H2   0.00259 %  H3   0.03745 %  H4   0.00119 %  H5   0.00118 %  (sortie 19.6 dBu)
+    +24 dBu : DHT    0.2145 %  H2   0.07303 %  H3    0.1913 %  H4   0.04312 %  H5   0.04403 %  (sortie 23.5 dBu)
+    +26 dBu : DHT    0.8352 %  H2    0.3686 %  H3    0.6828 %  H4    0.1982 %  H5    0.2239 %  (sortie 25.5 dBu)
+    +28 dBu : DHT    2.7444 %  H2    1.0090 %  H3    2.3700 %  H4    0.4910 %  H5    0.7953 %  (sortie 27.2 dBu)
+    +30 dBu : DHT    6.9948 %  H2    1.4326 %  H3    6.6278 %  H4    0.5069 %  H5    1.6094 %  (sortie 28.6 dBu)
+  100.0 Hz
+    + 4 dBu : DHT   0.00191 %  H2   0.00164 %  H3   0.00098 %  H4   0.00000 %  H5   0.00000 %  (sortie 4.0 dBu)
+    +10 dBu : DHT   0.00509 %  H2   0.00327 %  H3   0.00391 %  H4   0.00000 %  H5   0.00000 %  (sortie 10.0 dBu)
+    +16 dBu : DHT   0.01692 %  H2   0.00644 %  H3   0.01565 %  H4   0.00005 %  H5   0.00004 %  (sortie 16.0 dBu)
+    +20 dBu : DHT   0.04368 %  H2   0.00716 %  H3   0.04302 %  H4   0.00174 %  H5   0.00169 %  (sortie 20.0 dBu)
+    +24 dBu : DHT    0.2776 %  H2   0.09809 %  H3    0.2435 %  H4   0.06119 %  H5   0.06119 %  (sortie 23.9 dBu)
+    +26 dBu : DHT    1.0786 %  H2    0.4739 %  H3    0.8811 %  H4    0.2583 %  H5    0.2934 %  (sortie 25.8 dBu)
+    +28 dBu : DHT    3.3623 %  H2    1.1632 %  H3    2.9486 %  H4    0.5677 %  H5    0.9536 %  (sortie 27.6 dBu)
+    +30 dBu : DHT    8.1270 %  H2    1.5771 %  H3    7.7633 %  H4    0.6029 %  H5    1.6444 %  (sortie 28.8 dBu)
+  50.0 Hz
+    + 4 dBu : DHT   0.00435 %  H2   0.00423 %  H3   0.00101 %  H4   0.00000 %  H5   0.00000 %  (sortie 4.1 dBu)
+    +10 dBu : DHT   0.00933 %  H2   0.00843 %  H3   0.00402 %  H4   0.00000 %  H5   0.00000 %  (sortie 10.1 dBu)
+    +16 dBu : DHT   0.02316 %  H2   0.01667 %  H3   0.01609 %  H4   0.00005 %  H5   0.00004 %  (sortie 16.0 dBu)
+    +20 dBu : DHT   0.04975 %  H2   0.02310 %  H3   0.04398 %  H4   0.00195 %  H5   0.00175 %  (sortie 20.0 dBu)
+    +24 dBu : DHT    0.2784 %  H2   0.08631 %  H3    0.2468 %  H4   0.06741 %  H5   0.06242 %  (sortie 24.0 dBu)
+    +26 dBu : DHT    1.1019 %  H2    0.4869 %  H3    0.8935 %  H4    0.2842 %  H5    0.2944 %  (sortie 25.9 dBu)
+    +28 dBu : DHT    3.4277 %  H2    1.2474 %  H3    2.9715 %  H4    0.6629 %  H5    0.9422 %  (sortie 27.6 dBu)
+    +30 dBu : DHT    8.2238 %  H2    1.8704 %  H3    7.7769 %  H4    0.9047 %  H5    1.6112 %  (sortie 28.9 dBu)
+  20.0 Hz
+    + 4 dBu : DHT   0.02196 %  H2   0.02175 %  H3   0.00301 %  H4   0.00000 %  H5   0.00000 %  (sortie 4.3 dBu)
+    +10 dBu : DHT   0.04493 %  H2   0.04330 %  H3   0.01200 %  H4   0.00002 %  H5   0.00001 %  (sortie 10.3 dBu)
+    +16 dBu : DHT   0.09806 %  H2   0.08548 %  H3   0.04806 %  H4   0.00016 %  H5   0.00015 %  (sortie 16.3 dBu)
+    +20 dBu : DHT    0.1773 %  H2    0.1293 %  H3    0.1212 %  H4   0.00294 %  H5   0.00254 %  (sortie 20.3 dBu)
+    +24 dBu : DHT    0.3744 %  H2    0.1470 %  H3    0.3202 %  H4    0.1006 %  H5   0.06785 %  (sortie 24.3 dBu)
+    +26 dBu : DHT    1.1852 %  H2    0.6352 %  H3    0.8537 %  H4    0.4193 %  H5    0.2795 %  (sortie 26.2 dBu)
+    +28 dBu : DHT    3.5898 %  H2    1.8285 %  H3    2.7551 %  H4    1.1066 %  H5    0.8047 %  (sortie 27.9 dBu)
+    +30 dBu : DHT    8.3370 %  H2    3.3990 %  H3    7.2119 %  H4    1.9287 %  H5    1.3960 %  (sortie 29.1 dBu)
+
+  MIC 80, entrée à -60 dBu (sortie visée +20 dBu), 1 kHz : DHT 0.03759 % H2 0.00258 % H3 0.03746 %
+
+== Écrêtage : niveau de sortie à 1 % et 3 % de DHT (LINE 0, 1 kHz et 50 Hz) ==
+  1000.0 Hz : 1 % à +26.5 dBu, 3 % à +28.5 dBu
+  50.0 Hz : 1 % à +26.0 dBu, 3 % à +28.0 dBu
+
+== Repliement : 9 973 Hz poussé fort (MIC 80, sortie visée +30 dBu), pire raie non harmonique 20 Hz – 20 kHz ==
+  44.1 kHz, normal        (travail 88.2 kHz) : -55.2 dB à 1557 Hz
+  44.1 kHz, qualité haute (travail 176.4 kHz) : -93.7 dB à 16832 Hz
+  48.0 kHz, normal        (travail 96.0 kHz) : -56.7 dB à 6243 Hz
+  48.0 kHz, qualité haute (travail 192.0 kHz) : -96.0 dB à 9982 Hz
+  96.0 kHz, normal        (travail 96.0 kHz) : -56.8 dB à 6243 Hz
+  96.0 kHz, qualité haute (travail 192.0 kHz) : -99.4 dB à 9960 Hz
+
+== Latence (petit signal) ==
+  44.1 kHz normal        : latence déclarée 4 éch., retard de phase à 1 kHz 4.06 éch.
+  44.10 kHz qualité haute : latence déclarée 6 éch., retard de phase à 1 kHz 6.08 éch.
+  48.00 kHz normal        : latence déclarée 4 éch., retard de phase à 1 kHz 4.07 éch.
+  48.00 kHz qualité haute : latence déclarée 6 éch., retard de phase à 1 kHz 6.09 éch.
+  96.00 kHz normal        : latence déclarée 0 éch., retard de phase à 1 kHz 0.15 éch.
+  96.00 kHz qualité haute : latence déclarée 4 éch., retard de phase à 1 kHz 4.19 éch.
+
+== CPU : 20 s stéréo, blocs de 128, réglages typiques (EQ actif, HPF 80, MIC 60) ==
+  44.10 kHz normal        : 2.64 % d'un cœur (76.531 µs par bloc)
+  44.100 kHz qualité haute : 5.21 % d'un cœur (151.241 µs par bloc)
+  48.000 kHz normal        : 2.87 % d'un cœur (76.551 µs par bloc)
+  48.000 kHz qualité haute : 5.69 % d'un cœur (151.688 µs par bloc)
+  96.000 kHz normal        : 2.77 % d'un cœur (36.992 µs par bloc)
+  96.000 kHz qualité haute : 5.74 % d'un cœur (76.498 µs par bloc)
+  48 kHz, trois potards en mouvement permanent : 3.00 % d'un cœur
+
+== Robustesse : fréquences, tailles de blocs, réglages au hasard, NaN / inf en entrée ==
+  42 / 42 configurations sans valeur non finie ni emballement (pic le plus haut 39.9 dBFS, réglages extrêmes compris)
+
+== Clics : sinus 1 kHz à 0 dBu, changements de commutateurs toutes les 100 ms ==
+  dérivée seconde max, sans changement : 0.00205 ; avec changements : 0.00595 (rapport 2.90)
+
+== Coût de chaque composant (ns par échantillon, 96 kHz, signal musical à 0 dBu) ==
+  transformateur (ligne)            20.9 ns
+  transformateur (sortie, polarisé)20.9 ns
+  étage BA283 NV                   5.7 ns
+  étage de sortie + LO1166         32.8 ns
+  réseau HIGH / LOW (7 mémoires)  12.3 ns
+  réseau MID (3 mémoires)         12.5 ns
+  biquad                            2.4 ns
+  module complet, un canal          138.7 ns

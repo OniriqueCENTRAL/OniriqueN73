@@ -104,3 +104,18 @@ if(N73_TESTS)
     target_link_libraries(N73Bench PRIVATE juce::juce_dsp juce::juce_audio_basics
         juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
 endif()
+
+# Tests fonctionnels du plugin (processeur réel) : état, A / B, presets, automation, bypass, mono, latence
+if(N73_PLUGIN AND N73_TESTS)
+    juce_add_console_app(N73PluginTest PRODUCT_NAME "N73PluginTest")
+    # le processeur et l'interface compilés directement dans le test (sans la licence)
+    target_sources(N73PluginTest PRIVATE Tests/N73PluginTest.cpp Source/PluginProcessor.cpp Source/PluginEditor.cpp)
+    target_include_directories(N73PluginTest PRIVATE Source)
+    target_compile_definitions(N73PluginTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 N73_LICENCE=0
+        JucePlugin_VersionString="${PROJECT_VERSION}")
+    if(MSVC)
+        target_compile_options(N73PluginTest PRIVATE /utf-8)
+    endif()
+    target_link_libraries(N73PluginTest PRIVATE juce::juce_audio_utils juce::juce_dsp N73Assets OniriqueN73LicenseData
+        juce::juce_recommended_config_flags)
+endif()
