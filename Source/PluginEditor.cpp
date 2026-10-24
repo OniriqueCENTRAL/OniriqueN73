@@ -207,9 +207,9 @@ void N73Editor::resized()
     placeKnob (hpf, knobX, hpfY, 100.0f);
     placeKnob (output, panelCX, bottomTop + 58.0f, 70.0f);
 
-    place (micZ, panelCX - 90.0f, moduleY + 11.0f, 180.0f, 44.0f);
-    place (pad, panelCX - 90.0f, moduleY + 65.0f, 180.0f, 44.0f);
-    place (power, panelCX - 90.0f, bottomTop + 142.0f, 180.0f, 44.0f);
+    place (micZ, panelCX - 90.0f, moduleY + 7.0f, 180.0f, 54.0f);
+    place (pad, panelCX - 90.0f, moduleY + 61.0f, 180.0f, 54.0f);
+    place (power, panelCX - 90.0f, bottomTop + 138.0f, 180.0f, 54.0f);
     for (auto* t : { &micZ, &pad, &power }) t->setScale (s);
     place (eql, moduleX + 61.0f - 4.0f, moduleY + 877.0f - 4.0f, 78.0f, 42.0f);
     place (phase, moduleX + 131.0f - 4.0f, moduleY + 877.0f - 4.0f, 78.0f, 42.0f);

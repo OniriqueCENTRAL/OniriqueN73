@@ -436,7 +436,7 @@ public:
 
     void paint (juce::Graphics& g) override
     {
-        const float cx = (float) getWidth() * 0.5f, rowY = 12.0f * s;
+        const float cx = (float) getWidth() * 0.5f, rowY = 16.0f * s;   // marge au-dessus : le levier dépasse de la fente
         const auto slot = juce::Rectangle<float> (50.0f * s, 20.0f * s).withCentre ({ cx, rowY });
         textAt (g, left, { slot.getX() - 12.0f * s - 18.0f * s, rowY }, 13.0f * s, on ? dim : ember);
         textAt (g, right, { slot.getRight() + 12.0f * s + 18.0f * s, rowY }, 13.0f * s, on ? ember : dim);
