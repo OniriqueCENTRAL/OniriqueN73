@@ -64,14 +64,14 @@ int main()
     {
         auto p = make();
         setReal (*p, params::high, 6);
-        p->selectSlot (1);
+        p->presets.switchToSlot (1);
         setReal (*p, params::high, -6);
-        p->selectSlot (0);
+        p->presets.switchToSlot (0);
         const bool backA = std::abs (real (*p, params::high) - 6.0f) < 0.02f;
-        p->selectSlot (1);
+        p->presets.switchToSlot (1);
         const bool backB = std::abs (real (*p, params::high) + 6.0f) < 0.02f;
         check (backA && backB, "A / B : chaque mémoire retrouve ses réglages");
-        p->copyActiveToOther(); p->selectSlot (0);
+        p->presets.copyToOtherSlot(); p->presets.switchToSlot (0);
         check (std::abs (real (*p, params::high) + 6.0f) < 0.02f, "A / B : copie vers l'autre mémoire");
     }
 
@@ -80,10 +80,11 @@ int main()
         auto p = make();
         juce::AudioBuffer<float> buf (2, 256); juce::MidiBuffer midi;
         bool ok = true;
-        for (int i = 0; i < (int) factoryPresets().size(); ++i)
+        const auto names = p->presets.getStockNames();
+        for (const auto& name : names)
         {
-            p->presets.loadFactory (i);
-            ok &= p->presets.currentName() == factoryPresets()[(size_t) i].name;
+            p->presets.load (name);
+            ok &= p->presets.getCurrentName() == name;
             for (int b = 0; b < 40; ++b)
             {
                 for (int c = 0; c < 2; ++c) for (int s = 0; s < 256; ++s) buf.setSample (c, s, 0.3f * std::sin (0.05f * (float) (b * 256 + s)));
@@ -91,7 +92,10 @@ int main()
                 ok &= allFinite (buf);
             }
         }
-        check (ok, "presets d'usine : chargement et traitement (" + juce::String ((int) factoryPresets().size()) + ")");
+        check (ok, "presets d'usine : chargement et traitement (" + juce::String (names.size()) + ")");
+        const auto problems = p->presets.checkStock();
+        for (const auto& pb : problems) std::cout << "    " << pb << std::endl;
+        check (problems.isEmpty(), "presets d'usine : paramètres existants, valeurs dans leurs plages");
     }
 
     // automation au hasard pendant la lecture, blocs de tailles variables

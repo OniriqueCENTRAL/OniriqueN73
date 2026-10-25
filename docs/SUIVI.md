@@ -26,3 +26,8 @@ Publié : dépôt public OniriqueCENTRAL/OniriqueN73, slug et licence `onirique-
 - Préampli comme le manuel UAD : gains MIC et LINE séparés (clic sur MIC / LINE, dernière position de chaque entrée
   gardée dans le projet), OFF = traitement arrêté (son tel quel), PAD et MIC Z grisés en LINE, impédances 1,2 k /
   600 / 300 Ω, fader avant l'ampli de sortie. Plus de témoin de saturation en bas du module (demande de Nov).
+- Barre du haut des plugins ONIRIQUE (Source/ui/OniriqueBar.h, OniriquePresets.h, comme WEIGHT / MASSIF / GLUE) à la
+  place de l'ancien bandeau : le titre d'origine (sigil, ONIRIQUE, N73), 18 presets d'usine à tags, navigateur,
+  favoris, A / B, copier / coller, taille de 75 à 200 % ; le bouton des réglages (CAL, LEVEL MATCH, qualité) reste à
+  côté du menu ⋯. IN pilote un paramètre Bypass ajouté (aussi celui du DAW). Les anciens presets et la mémoire A / B
+  des projets 1.0 sont repris.

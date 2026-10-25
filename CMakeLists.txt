@@ -52,7 +52,8 @@ if(N73_PLUGIN)
     juce_add_binary_data(N73Assets SOURCES Resources/logo.png ${N73_KNOB_PNGS})
     set_target_properties(N73Assets PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
-    target_include_directories(OniriqueN73 PRIVATE Source)
+    # la racine : License/LicenseTheme.h (les polices de la charte) sert aussi à la barre du haut
+    target_include_directories(OniriqueN73 PRIVATE Source ${CMAKE_CURRENT_SOURCE_DIR})
 
     if(N73_LICENCE)
         include(License/OniriqueLicense.cmake)
@@ -116,7 +117,7 @@ if(N73_PLUGIN AND N73_TESTS)
     juce_add_console_app(N73PluginTest PRODUCT_NAME "N73PluginTest")
     # le processeur et l'interface compilés directement dans le test (sans la licence)
     target_sources(N73PluginTest PRIVATE Tests/N73PluginTest.cpp Source/PluginProcessor.cpp Source/PluginEditor.cpp)
-    target_include_directories(N73PluginTest PRIVATE Source)
+    target_include_directories(N73PluginTest PRIVATE Source ${CMAKE_CURRENT_SOURCE_DIR})
     target_compile_definitions(N73PluginTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 N73_LICENCE=0
         JucePlugin_VersionString="${PROJECT_VERSION}")
     if(MSVC)

@@ -21,6 +21,8 @@ public:
     bool isBusesLayoutSupported (const BusesLayout&) const override;
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     void processBlockBypassed (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    // le bypass du DAW pilote le paramètre Bypass (IN de la barre du haut) : fondu propre, latence alignée
+    juce::AudioProcessorParameter* getBypassParameter() const override { return apvts.getParameter (params::bypass); }
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
@@ -39,18 +41,14 @@ public:
     void getStateInformation (juce::MemoryBlock&) override;
     void setStateInformation (const void*, int) override;
 
-    // A / B : deux mémoires du son ; l'autre mémoire garde ce qu'on y a laissé
-    int getActiveSlot() const { return activeSlot; }
-    void selectSlot (int slot);
-    void copyActiveToOther();
-
     /** dernière position du gain dans la plage MIC ou LINE : clic sur MIC ou LINE, comme sur le plugin UAD. */
     int lastGainIndex (bool mic) const { return mic ? lastMicIndex.load() : lastLineIndex.load(); }
     int getLatency() const { return getLatencySamples(); }
     double getWorkingRate() const { return engine.workingRate (apvts.getRawParameterValue (params::quality)->load() > 0.5f); }
 
     juce::AudioProcessorValueTreeState apvts;
-    N73PresetManager presets { apvts };
+    /** Les presets d'usine et ceux de l'utilisateur, la comparaison A/B : ce que montre la barre du haut. */
+    onirique::PresetBank presets { apvts, "N73", n73presets::stockPresets(), n73presets::tagNames(), params::notStored() };
 #if N73_LICENCE
     onirique::license::Guard license { "onirique-n73" };
 #endif
@@ -62,8 +60,6 @@ private:
 
     params::Reader reader { apvts };
     n73::Engine engine;
-    std::map<juce::String, float> slots[2];
-    int activeSlot = 0;
     std::atomic<int> lastMicIndex { n73::defaultMicIndex }, lastLineIndex { n73::defaultLineIndex };
     void rememberGain (int index);
 

@@ -16,7 +16,8 @@ namespace params
 {
 inline const juce::String gain = "gain", micZ = "micZ", pad = "pad", high = "high", midFreq = "midFreq", mid = "mid",
                           lowFreq = "lowFreq", low = "low", hpf = "hpf", eql = "eql", phase = "phase", output = "output",
-                          fader = "fader", power = "power", cal = "cal", levelMatch = "levelMatch", quality = "quality";
+                          fader = "fader", power = "power", cal = "cal", levelMatch = "levelMatch", quality = "quality",
+                          bypass = "bypass";
 
 inline juce::StringArray gainNames()
 {
@@ -89,6 +90,8 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout layout()
     choice (cal, "Calibration", { "0 dBFS = +18 dBu", "0 dBFS = +20 dBu", "0 dBFS = +22 dBu", "0 dBFS = +24 dBu", "0 dBFS = +26 dBu" }, 4, false);
     toggle (levelMatch, "Level Match", false, "ON", "OFF");
     choice (quality, "Quality", { "Normal", "High" }, 0, false);
+    // IN de la barre du haut (et le bypass du DAW) : ajouté après la 1.0.3, en dernier
+    toggle (bypass, "Bypass", false, "BYPASSED", "IN");
     return l;
 }
 
@@ -102,7 +105,7 @@ struct Reader
         midFreq = get (params::midFreq); mid = get (params::mid); lowFreq = get (params::lowFreq); low = get (params::low);
         hpf = get (params::hpf); eql = get (params::eql); phase = get (params::phase); output = get (params::output);
         fader = get (params::fader); power = get (params::power); cal = get (params::cal); levelMatch = get (params::levelMatch);
-        quality = get (params::quality);
+        quality = get (params::quality); bypass = get (params::bypass);
     }
 
     n73::EngineParams read() const
@@ -124,15 +127,16 @@ struct Reader
         p.outputDb = output->load();       // OUTPUT : après le module (volume propre)
         m.calDbu = 18.0 + 2.0 * juce::jlimit (0, 4, (int) cal->load());
         p.levelMatch = levelMatch->load() > 0.5f;
-        p.power = power->load() > 0.5f;
+        p.power = power->load() > 0.5f && bypass->load() < 0.5f;   // POWER de la façade, IN de la barre du haut
         p.highQuality = quality->load() > 0.5f;
         return p;
     }
 
     std::atomic<float>* gain {}, *micZ {}, *pad {}, *high {}, *midFreq {}, *mid {}, *lowFreq {}, *low {}, *hpf {}, *eql {}, *phase {},
-                       *output {}, *fader {}, *power {}, *cal {}, *levelMatch {}, *quality {};
+                       *output {}, *fader {}, *power {}, *cal {}, *levelMatch {}, *quality {}, *bypass {};
 };
 
-/** Paramètres d'un preset ou d'une mémoire A / B (pas les réglages de session : CAL, qualité). */
-inline bool isSoundParameter (const juce::String& id) { return id != cal && id != quality; }
+/** Ce qu'un preset ou la mémoire A / B laissent tel quel : les réglages de session et d'écoute (IN, CAL, qualité,
+    LEVEL MATCH). */
+inline juce::StringArray notStored() { return { bypass, cal, quality, levelMatch }; }
 } // namespace params

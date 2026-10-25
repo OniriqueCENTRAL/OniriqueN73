@@ -61,7 +61,8 @@ N73Editor::N73Editor (N73Processor& proc)
           const bool mic = ! n73::isLineIndex ((int) std::lround (v));
           micZ.setEnabled (mic);
           pad.setEnabled (mic);
-      })
+      }),
+      bar (proc.presets, proc.apvts, "N73", {}, baseWidth, 480)
 {
     mid.setMidLow (true);
     low.setMidLow (false);
@@ -74,9 +75,14 @@ N73Editor::N73Editor (N73Processor& proc)
     }
 
     for (juce::Component* c : std::initializer_list<juce::Component*> { &gain, &high, &mid, &low, &hpf, &output, &micZ, &pad, &power, &eql, &phase,
-                                &fader, &prevPreset, &presetName, &nextPreset, &slotA, &slotB, &settings })
+                                &fader })
         addAndMakeVisible (c);
     addChildComponent (bubble);
+
+    // la barre du haut, son titre (celui de l'ancien bandeau : le sigil, ONIRIQUE, N73), et le bouton des réglages par-dessus
+    addAndMakeVisible (bar);
+    addAndMakeVisible (settings);
+    bar.setBrand (200, [this] (juce::Graphics& g, juce::Rectangle<float> area) { paintTitle (g, area); });
 
     auto pill = [] (juce::Graphics& g, juce::Rectangle<float> r, bool hover)
     {
@@ -85,50 +91,6 @@ N73Editor::N73Editor (N73Processor& proc)
         g.setColour (hover ? ui::ember.withAlpha (0.5f) : ui::rule);
         g.drawRoundedRectangle (r.reduced (0.5f), r.getHeight() * 0.5f, 1.0f);
     };
-    prevPreset.draw = [this] (juce::Graphics& g, juce::Rectangle<float> r, bool hover)
-    {
-        g.setColour (hover ? ui::bone : ui::haze);
-        juce::Path t; t.addTriangle (r.getCentreX() + 3 * scale(), r.getCentreY() - 4 * scale(), r.getCentreX() + 3 * scale(), r.getCentreY() + 4 * scale(),
-                                     r.getCentreX() - 3 * scale(), r.getCentreY());
-        g.fillPath (t);
-    };
-    nextPreset.draw = [this] (juce::Graphics& g, juce::Rectangle<float> r, bool hover)
-    {
-        g.setColour (hover ? ui::bone : ui::haze);
-        juce::Path t; t.addTriangle (r.getCentreX() - 3 * scale(), r.getCentreY() - 4 * scale(), r.getCentreX() - 3 * scale(), r.getCentreY() + 4 * scale(),
-                                     r.getCentreX() + 3 * scale(), r.getCentreY());
-        g.fillPath (t);
-    };
-    presetName.draw = [this] (juce::Graphics& g, juce::Rectangle<float> r, bool hover)
-    {
-        g.setColour (hover ? juce::Colours::white : ui::bone);
-        g.setFont (ui::font (ui::Face::mono, 11.0f * scale()));
-        g.drawFittedText (processor.presets.currentName(), r.toNearestInt(), juce::Justification::centred, 1, 0.8f);
-    };
-    prevPreset.onClick = [this] { processor.presets.step (-1); refreshHeader(); };
-    nextPreset.onClick = [this] { processor.presets.step (1); refreshHeader(); };
-    presetName.onClick = [this] { showPresetMenu(); };
-
-    auto slotDraw = [this] (int slot)
-    {
-        return [this, slot] (juce::Graphics& g, juce::Rectangle<float> r, bool hover)
-        {
-            const bool on = processor.getActiveSlot() == slot;
-            if (on)
-            {
-                g.setGradientFill (juce::ColourGradient (ui::ember, r.getX(), r.getY(), juce::Colour (0xff8f1f2c), r.getRight(), r.getBottom(), false));
-                g.fillRoundedRectangle (r.reduced (1.0f), r.getHeight() * 0.5f);
-            }
-            g.setColour (on ? juce::Colour (0xfffff4f5) : hover ? ui::bone : ui::haze);
-            g.setFont (ui::font (ui::Face::display, 11.0f * scale()));
-            g.drawText (slot == 0 ? "A" : "B", r, juce::Justification::centred, false);
-        };
-    };
-    slotA.draw = slotDraw (0);
-    slotB.draw = slotDraw (1);
-    slotA.onClick = [this] { processor.selectSlot (0); refreshHeader(); slotA.repaint(); slotB.repaint(); };
-    slotB.onClick = [this] { processor.selectSlot (1); refreshHeader(); slotA.repaint(); slotB.repaint(); };
-    slotA.setTitle ("A"); slotB.setTitle ("B");
     settings.draw = [this, pill] (juce::Graphics& g, juce::Rectangle<float> r, bool hover)
     {
         pill (g, r, hover);
@@ -141,7 +103,6 @@ N73Editor::N73Editor (N73Processor& proc)
     };
     settings.onClick = [this] { showSettingsMenu(); };
     settings.setTitle (juce::String (juce::CharPointer_UTF8 ("Réglages")));
-    prevPreset.setTitle (juce::String (juce::CharPointer_UTF8 ("Preset précédent"))); nextPreset.setTitle ("Preset suivant"); presetName.setTitle ("Presets");
 
 #if N73_LICENCE
     licenseOverlay = std::make_unique<onirique::license::Overlay> (pluginName, processor.license);
@@ -154,13 +115,17 @@ N73Editor::N73Editor (N73Processor& proc)
 
     // la taille gardée se lit AVANT de poser les limites : setResizeLimits redimensionne déjà l'éditeur, et ce premier
     // resized() écrasait la taille mémorisée (l'interface revenait à sa taille minimale à chaque ouverture)
-    auto size = onirique::window::openingSize (processor.apvts.state, pluginName, { 480, 896 }, { 360, 672 }, { 900, 1680 });
+    // de 75 à 200 % de la taille par défaut (480 de large) : le menu de la barre du haut
+    auto heightFor = [] (int w) { return juce::roundToInt ((float) w * (float) baseHeight / (float) baseWidth); };
+    auto size = onirique::window::openingSize (processor.apvts.state, pluginName, { 480, heightFor (480) }, { 360, heightFor (360) },
+                                               { 960, heightFor (960) });
     // la 1.0.0 mémorisait toujours la taille minimale (voir ci-dessous) : cette taille-là n'est pas un choix, on repart
     // de la taille par défaut
     if (size.x <= 360)
-        size = onirique::window::openingSize ({}, pluginName + " defaut", { 480, 896 }, { 360, 672 }, { 900, 1680 });
+        size = onirique::window::openingSize ({}, pluginName + " defaut", { 480, heightFor (480) }, { 360, heightFor (360) },
+                                             { 960, heightFor (960) });
     setResizable (true, true);
-    setResizeLimits (360, 672, 900, 1680);
+    setResizeLimits (360, heightFor (360), 960, heightFor (960));
     getConstrainer()->setFixedAspectRatio ((double) baseWidth / (double) baseHeight);
     setSize (size.x, juce::roundToInt ((float) size.x * (float) baseHeight / (float) baseWidth));
     sizeReady = true;
@@ -170,13 +135,15 @@ N73Editor::N73Editor (N73Processor& proc)
     if (juce::SystemStats::getEnvironmentVariable ("ONIRIQUE_UI_TEST", {}).contains ("demo"))
         setSize (baseWidth, baseHeight);
    #endif
-    refresher.startTimerHz (4);
 
     // essais locaux : ONIRIQUE_UI_PNG=fichier → l'interface s'écrit elle-même en PNG (rendu logiciel)
     if (auto* png = std::getenv ("ONIRIQUE_UI_PNG"))
     {
         const juce::String path (png);
         juce::Component::SafePointer<N73Editor> safe (this);
+        // ONIRIQUE_UI_TEST=...browser : le navigateur de presets ouvert sur l'image
+        if (juce::SystemStats::getEnvironmentVariable ("ONIRIQUE_UI_TEST", {}).contains ("browser"))
+            juce::Timer::callAfterDelay (500, [safe] { if (safe != nullptr) safe->bar.openBrowser(); });
         juce::Timer::callAfterDelay (900, [safe, path]
         {
             if (safe == nullptr) return;
@@ -197,12 +164,14 @@ N73Editor::~N73Editor()
 void N73Editor::resized()
 {
     const float s = scale();
+    // tout (sauf la barre du haut) est en coordonnées de base, descendu de topOffset sous la barre
     auto place = [s] (juce::Component& c, float x, float y, float w, float h)
     {
-        c.setBounds (juce::Rectangle<float> (x * s, y * s, w * s, h * s).toNearestInt());
+        c.setBounds (juce::Rectangle<float> (x * s, (y + topOffset) * s, w * s, h * s).toNearestInt());
     };
     auto placeKnob = [&] (ui::Knob& k, float cx, float cy, float half)
     {
+        cy += topOffset;
         const auto r = juce::Rectangle<float> ((cx - half) * s, (cy - half) * s, 2.0f * half * s, 2.0f * half * s).toNearestInt();
         k.setBounds (r);
         k.setLayout (juce::Point<float> ((cx * s - (float) r.getX()) / s, (cy * s - (float) r.getY()) / s), s);
@@ -224,26 +193,27 @@ void N73Editor::resized()
     place (fader, panelCX - 50.0f, faderTop, 100.0f, 662.0f);
     fader.setScale (s);
 
-    place (prevPreset, 282.0f, 29.0f, 28.0f, 34.0f);
-    place (presetName, 310.0f, 29.0f, 124.0f, 34.0f);
-    place (nextPreset, 434.0f, 29.0f, 28.0f, 34.0f);
-    place (slotA, 470.0f, 29.0f, 34.0f, 34.0f);
-    place (slotB, 504.0f, 29.0f, 34.0f, 34.0f);
-    place (settings, 546.0f, 29.0f, 34.0f, 34.0f);
-
+    // la barre du haut : la pastille de licence et le bouton des réglages à côté du menu ⋯
+    constexpr int gearW = 30, gearGap = 6;
 #if N73_LICENCE
-    if (licenseOverlay != nullptr)
-        licenseOverlay->fit (getLocalBounds(), s, { 176, 1099, 248, 20 });   // la marge sous la carte
+    const int pillW = licenseOverlay != nullptr ? licenseOverlay->pillWidth() : 0;
+#else
+    const int pillW = 0;
 #endif
+    bar.setPillWidth (pillW + (pillW > 0 ? gearGap : 0) + gearW);
+    bar.place (s, getLocalBounds());
+    {
+        auto area = bar.getPillArea();
+        const auto gear = area.removeFromRight (gearW).withSizeKeepingCentre (gearW, gearW);
+        settings.setBounds (juce::Rectangle<float> ((float) gear.getX() * s, (float) gear.getY() * s, (float) gear.getWidth() * s,
+                                                    (float) gear.getHeight() * s).toNearestInt());
+#if N73_LICENCE
+        if (licenseOverlay != nullptr)
+            licenseOverlay->fit (getLocalBounds(), s, area.withTrimmedRight (gearGap), juce::Justification::centredRight);
+#endif
+    }
     renderBackground();
     if (sizeReady) onirique::window::remember (processor.apvts.state, getWidth(), getHeight());
-}
-
-void N73Editor::refreshHeader()
-{
-    const auto name = processor.presets.currentName();
-    if (name != shownPreset) { shownPreset = name; presetName.repaint(); }
-    if (processor.getActiveSlot() != shownSlot) { shownSlot = processor.getActiveSlot(); slotA.repaint(); slotB.repaint(); }
 }
 
 //==============================================================================
@@ -263,31 +233,8 @@ void N73Editor::renderBackground()
     g.setGradientFill (juce::ColourGradient (ui::blood.withAlpha (0.35f), 600, 1120, ui::blood.withAlpha (0.0f), 600 - 420, 1120, true));
     g.fillRect (0, 0, baseWidth, baseHeight);
 
-    // bandeau : sigil, ONIRIQUE, N73
-    if (logo.isValid()) g.drawImage (logo, juce::Rectangle<float> (20, 30, 36, 32), juce::RectanglePlacement::centred);
-    {
-        auto f = ui::font (ui::Face::display, 13.0f);
-        f.setExtraKerningFactor (0.12f);
-        g.setFont (f);
-        g.setColour (ui::bone);
-        g.drawText ("ONIRIQUE", juce::Rectangle<float> (64, 30, 120, 32), juce::Justification::centredLeft, false);
-        const float w = juce::GlyphArrangement::getStringWidth (f, "ONIRIQUE");
-        auto big = ui::font (ui::Face::display, 22.0f);
-        big.setExtraKerningFactor (0.06f);
-        g.setFont (big);
-        g.setColour (ui::ember);
-        g.drawText ("N73", juce::Rectangle<float> (64 + w + 10, 28, 90, 36), juce::Justification::centredLeft, false);
-    }
-    // pastilles du bandeau (fonds)
-    auto pill = [&g] (juce::Rectangle<float> r)
-    {
-        g.setColour (juce::Colour (0xf0121012));
-        g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
-        g.setColour (ui::rule);
-        g.drawRoundedRectangle (r.reduced (0.5f), r.getHeight() * 0.5f, 1.0f);
-    };
-    pill ({ 282, 29, 180, 34 });
-    pill ({ 470, 29, 68, 34 });
+    // tout le reste, sous la barre du haut (le titre et les presets y sont)
+    g.addTransform (juce::AffineTransform::translation (0.0f, topOffset));
 
     // carte
     const juce::Rectangle<float> card (20, 86, 560, 1014);
@@ -384,61 +331,33 @@ void N73Editor::renderBackground()
     }
 }
 
+// Le titre de l'ancien bandeau (le sigil, ONIRIQUE, N73), dans la barre du haut : x et y de l'ancien bandeau, ramenés
+// dans la zone de la marque de la barre (première rangée, centrée à 21 points).
+void N73Editor::paintTitle (juce::Graphics& g, juce::Rectangle<float> area) const
+{
+    auto X = [&] (float oldX) { return area.getX() + oldX - 20.0f; };
+    auto Y = [] (float oldY) { return 21.0f + oldY - 46.0f; };
+    g.setImageResamplingQuality (juce::Graphics::highResamplingQuality);
+    if (logo.isValid()) g.drawImage (logo, juce::Rectangle<float> (X (20), Y (30), 36, 32), juce::RectanglePlacement::centred);
+    auto f = ui::font (ui::Face::display, 13.0f);
+    f.setExtraKerningFactor (0.12f);
+    g.setFont (f);
+    g.setColour (ui::bone);
+    g.drawText ("ONIRIQUE", juce::Rectangle<float> (X (64), Y (30), 120, 32), juce::Justification::centredLeft, false);
+    const float w = juce::GlyphArrangement::getStringWidth (f, "ONIRIQUE");
+    auto big = ui::font (ui::Face::display, 22.0f);
+    big.setExtraKerningFactor (0.06f);
+    g.setFont (big);
+    g.setColour (ui::ember);
+    g.drawText ("N73", juce::Rectangle<float> (X (64) + w + 10, Y (28), 90, 36), juce::Justification::centredLeft, false);
+}
+
 void N73Editor::paint (juce::Graphics& g)
 {
     if (background.isValid())
         g.drawImage (background, getLocalBounds().toFloat());
     else
         g.fillAll (ui::bg);
-}
-
-//==============================================================================
-void N73Editor::showPresetMenu()
-{
-    juce::PopupMenu m;
-    m.setLookAndFeel (&menuLook);
-    m.addSectionHeader ("Presets ONIRIQUE");
-    const auto& factory = factoryPresets();
-    const auto current = processor.presets.currentName();
-    for (int i = 0; i < (int) factory.size(); ++i)
-        m.addItem (1 + i, factory[(size_t) i].name, true, factory[(size_t) i].name == current);
-    const auto users = processor.presets.userPresets();
-    if (! users.isEmpty())
-    {
-        m.addSectionHeader ("Mes presets");
-        for (int i = 0; i < users.size(); ++i)
-            m.addItem (100 + i, users[i].getFileNameWithoutExtension(), true, users[i].getFileNameWithoutExtension() == current);
-    }
-    m.addSeparator();
-    m.addItem (1000, juce::String (juce::CharPointer_UTF8 ("Enregistrer le réglage actuel…")));
-    m.addItem (1001, "Ouvrir le dossier des presets");
-    juce::Component::SafePointer<N73Editor> safe (this);
-    m.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (&presetName), [safe, users] (int r)
-    {
-        if (safe == nullptr || r == 0) return;
-        auto& ed = *safe;
-        if (r >= 1 && r < 100) ed.processor.presets.loadFactory (r - 1);
-        else if (r >= 100 && r < 1000) ed.processor.presets.loadFile (users[r - 100]);
-        else if (r == 1001) { N73PresetManager::folder().createDirectory(); N73PresetManager::folder().startAsProcess(); }
-        else if (r == 1000)
-        {
-            // la boîte appartient à l'éditeur : elle disparaît avec lui
-            ed.saveDialog = std::make_unique<juce::AlertWindow> ("Enregistrer le preset", "Nom du preset :", juce::MessageBoxIconType::NoIcon, &ed);
-            auto* w = ed.saveDialog.get();
-            w->setLookAndFeel (&ed.menuLook);
-            w->addTextEditor ("name", ed.processor.presets.currentName());
-            w->addButton ("Enregistrer", 1, juce::KeyPress (juce::KeyPress::returnKey));
-            w->addButton ("Annuler", 0, juce::KeyPress (juce::KeyPress::escapeKey));
-            w->enterModalState (true, juce::ModalCallbackFunction::create ([safe] (int result)
-            {
-                if (safe == nullptr || safe->saveDialog == nullptr) return;
-                if (result == 1) safe->processor.presets.save (safe->saveDialog->getTextEditorContents ("name"));
-                safe->refreshHeader();
-                juce::MessageManager::callAsync ([safe] { if (safe != nullptr) safe->saveDialog.reset(); });
-            }), false);
-        }
-        ed.refreshHeader();
-    });
 }
 
 void N73Editor::showSettingsMenu()
@@ -463,8 +382,6 @@ void N73Editor::showSettingsMenu()
     m.addItem (30, juce::String (juce::CharPointer_UTF8 ("Qualité normale (×2 à 44,1 / 48 kHz)")), true, choiceIndex (params::quality) == 0);
     m.addItem (31, juce::String (juce::CharPointer_UTF8 ("Qualité haute (×4 : moins de repliement, CPU ×2)")), true, choiceIndex (params::quality) == 1);
     m.addSeparator();
-    m.addItem (40, processor.getActiveSlot() == 0 ? juce::String (juce::CharPointer_UTF8 ("Copier A → B")) : juce::String (juce::CharPointer_UTF8 ("Copier B → A")));
-    m.addSeparator();
     const double rate = processor.getWorkingRate();
     m.addItem (99, juce::String (juce::CharPointer_UTF8 ("Latence : ")) + juce::String (processor.getLatency()) + juce::String (juce::CharPointer_UTF8 (" éch. · travail à "))
                    + juce::String (rate / 1000.0, 1) + " kHz", false, false);
@@ -477,6 +394,5 @@ void N73Editor::showSettingsMenu()
         if (r >= 10 && r < 15) setParam (params::cal, (float) (r - 10));
         else if (r == 20) setParam (params::levelMatch, choiceIndex (params::levelMatch) == 1 ? 0.0f : 1.0f);
         else if (r == 30 || r == 31) setParam (params::quality, (float) (r - 30));
-        else if (r == 40) safe->processor.copyActiveToOther();
     });
 }

@@ -9,7 +9,8 @@ N73Processor::N73Processor()
     apvts.addParameterListener (params::quality, this);
     apvts.addParameterListener (params::gain, this);
     rememberGain ((int) apvts.getRawParameterValue (params::gain)->load());
-    slots[0] = slots[1] = presets.capture();
+    apvts.state.setProperty ("preset", "INIT", nullptr);   // l'état de départ : les valeurs par défaut
+    n73presets::importOldUserPresets (presets);
 }
 
 N73Processor::~N73Processor()
@@ -74,35 +75,12 @@ void N73Processor::process (juce::AudioBuffer<float>& buffer, bool bypassed)
 void N73Processor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) { process (buffer, false); }
 void N73Processor::processBlockBypassed (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) { process (buffer, true); }
 
-void N73Processor::selectSlot (int slot)
-{
-    slot = juce::jlimit (0, 1, slot);
-    if (slot == activeSlot) return;
-    slots[activeSlot] = presets.capture();
-    activeSlot = slot;
-    presets.apply (slots[activeSlot]);
-}
-
-void N73Processor::copyActiveToOther()
-{
-    slots[activeSlot] = presets.capture();
-    slots[1 - activeSlot] = slots[activeSlot];
-}
-
 void N73Processor::getStateInformation (juce::MemoryBlock& dest)
 {
     auto state = apvts.copyState();
-    slots[activeSlot] = presets.capture();
-    state.setProperty ("activeSlot", activeSlot, nullptr);
+    presets.writeState (state);   // le côté A/B écouté, et l'autre
     state.setProperty ("lastMic", lastMicIndex.load(), nullptr);
     state.setProperty ("lastLine", lastLineIndex.load(), nullptr);
-    for (int s = 0; s < 2; ++s)
-    {
-        juce::ValueTree t ("Slot" + juce::String (s));
-        for (const auto& [id, v] : slots[s]) t.setProperty (id, v, nullptr);
-        state.removeChild (state.getChildWithName (t.getType()), nullptr);
-        state.appendChild (t, nullptr);
-    }
     if (auto xml = state.createXml()) copyXmlToBinary (*xml, dest);
 }
 
@@ -111,21 +89,30 @@ void N73Processor::setStateInformation (const void* data, int size)
     auto xml = getXmlFromBinary (data, size);
     if (xml == nullptr || ! xml->hasTagName (apvts.state.getType())) return;
     auto state = juce::ValueTree::fromXml (*xml);
-    for (int s = 0; s < 2; ++s)
+    // un projet de la 1.0 : ses mémoires A / B (Slot0, Slot1, activeSlot) passent dans la barre du haut, et le nom de
+    // son preset suit
+    if (state.hasProperty ("activeSlot") && ! state.hasProperty ("slot"))
     {
-        const auto t = state.getChildWithName ("Slot" + juce::String (s));
-        slots[s].clear();
-        for (int i = 0; i < t.getNumProperties(); ++i)
-            slots[s][t.getPropertyName (i).toString()] = (float) t.getProperty (t.getPropertyName (i));
+        const int active = juce::jlimit (0, 1, (int) state.getProperty ("activeSlot", 0));
+        state.setProperty ("slot", active, nullptr);
+        const auto other = state.getChildWithName ("Slot" + juce::String (1 - active));
+        if (other.isValid() && other.getNumProperties() > 0)
+        {
+            juce::ValueTree t ("OtherSlot");
+            t.copyPropertiesFrom (other, nullptr);
+            t.setProperty ("preset", state.getProperty ("presetName", "INIT"), nullptr);
+            state.appendChild (t, nullptr);
+        }
     }
-    activeSlot = juce::jlimit (0, 1, (int) state.getProperty ("activeSlot", 0));
+    for (auto* old : { "Slot0", "Slot1" }) state.removeChild (state.getChildWithName (old), nullptr);
+    if (! state.hasProperty ("preset") && state.hasProperty ("presetName"))
+        state.setProperty ("preset", state["presetName"], nullptr);
+    presets.readState (state);
     apvts.replaceState (state);
     // après replaceState : la position restaurée vient de mettre à jour une des deux mémoires
     rememberGain ((int) state.getProperty ("lastMic", n73::defaultMicIndex));
     rememberGain ((int) state.getProperty ("lastLine", n73::defaultLineIndex));
     rememberGain ((int) apvts.getRawParameterValue (params::gain)->load());
-    if (slots[0].empty()) slots[0] = presets.capture();
-    if (slots[1].empty()) slots[1] = presets.capture();
     triggerAsyncUpdate();
 }
 

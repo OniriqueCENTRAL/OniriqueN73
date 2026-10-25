@@ -1,142 +1,81 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
-#include <map>
-#include <vector>
 #include "Params.h"
+#include "ui/OniriquePresets.h"
 
 //==============================================================================
-//  Presets : usine (ici) + utilisateur (fichiers .n73preset dans %APPDATA%/Onirique/N73/Presets).
-//  Un preset contient les paramètres du son ; jamais CAL ni la qualité (réglages de session).
-//  Les presets d'usine sont des points de départ, pas des réglages « du 1073 ».
+//  Presets d'usine du N73, rangés par usage pour le navigateur de la barre du haut (les tags). Ce sont des points de
+//  départ, pas des réglages « du 1073 ». Valeurs réelles ; un réglage non cité reprend sa valeur par défaut.
+//  Index du commutateur : LINE +20 = 0, +15 = 1, +10 = 2, +5 = 3, 0 = 4 … MIC 20 = 8, MIC 25 = 9, MIC 30 = 10 …
+//  midFreq : 0 OFF, 1 0,36, 2 0,7, 3 1,6, 4 3,2, 5 4,8, 6 7,2 kHz ; lowFreq : 0 OFF, 1 35, 2 60, 3 110, 4 220 Hz ;
+//  hpf : 0 OFF, 1 50, 2 80, 3 160, 4 300 Hz.
+//  Niveaux pensés pour une source vers -18 dBFS avec la calibration par défaut (0 dBFS = +26 dBu) : le gain règle le
+//  grain, OUTPUT ramène le volume.
 //==============================================================================
-struct N73Preset
+namespace n73presets
 {
-    juce::String name;
-    std::vector<std::pair<juce::String, float>> values;   // valeurs réelles (dB, index de choix, 0 / 1)
-};
+enum Tags { vocal = 1, drums = 2, bass = 4, instruments = 8, mix = 16, drive = 32 };
 
-inline const std::vector<N73Preset>& factoryPresets()
+inline juce::StringArray tagNames() { return { "Vocal", "Drums", "Bass", "Instruments", "Mix", "Drive" }; }
+
+inline std::vector<onirique::PresetBank::Stock> stockPresets()
 {
-    // index du commutateur : LINE +20 = 0 … LINE 0 = 4 … MIC 20 = 8, MIC 25 = 9, MIC 30 = 10 …
-    // niveaux pensés pour une voix vers -18 dBFS avec la calibration par défaut (0 dBFS = +26 dBu) : le gain règle le
-    // grain, OUTPUT ramène le volume
+    using namespace params;
     auto n = [] (const char* s) { return juce::String (juce::CharPointer_UTF8 (s)); };
-    static const std::vector<N73Preset> list = {
-        { "INIT", {} },
-        { n ("VOCAL \xc2\xb7 WARM LEAD"), { { params::gain, 1.0f }, { params::hpf, 2.0f }, { params::lowFreq, 3.0f }, { params::low, -2.0f },
-                                            { params::midFreq, 4.0f }, { params::mid, 3.0f }, { params::high, 4.0f }, { params::output, -15.0f } } },
-        { n ("VOCAL \xc2\xb7 DRIVEN"),    { { params::gain, 9.0f }, { params::hpf, 2.0f }, { params::high, 3.0f }, { params::output, -24.0f } } },
-        { n ("BASS \xc2\xb7 GRIT"),       { { params::gain, 8.0f }, { params::lowFreq, 2.0f }, { params::low, 4.0f }, { params::midFreq, 2.0f },
-                                            { params::mid, 2.0f }, { params::output, -20.0f } } },
-        { n ("DRUMS \xc2\xb7 BUS LINE"),  { { params::gain, 2.0f }, { params::lowFreq, 2.0f }, { params::low, 3.0f }, { params::high, 4.0f },
-                                            { params::output, -10.0f } } },
-        { n ("ACOUSTIC \xc2\xb7 AIR"),    { { params::gain, 3.0f }, { params::hpf, 2.0f }, { params::midFreq, 3.0f }, { params::mid, -2.0f },
-                                            { params::high, 5.0f }, { params::output, -5.0f } } },
-        { n ("LINE \xc2\xb7 CLEAN"),      { { params::gain, 4.0f } } },
+    return {
+        { "INIT", 0, {} },
+        { n ("VOCAL \xc2\xb7 WARM LEAD"), vocal,
+          { { gain, 1.0f }, { hpf, 2.0f }, { lowFreq, 3.0f }, { low, -2.0f }, { midFreq, 4.0f }, { mid, 3.0f }, { high, 4.0f }, { output, -15.0f } } },
+        { n ("VOCAL \xc2\xb7 AIRY POP"), vocal,
+          { { gain, 3.0f }, { hpf, 2.0f }, { lowFreq, 3.0f }, { low, -2.0f }, { midFreq, 5.0f }, { mid, 2.0f }, { high, 5.0f }, { output, -5.0f } } },
+        { n ("VOCAL \xc2\xb7 RAP PRESENCE"), vocal | drive,
+          { { gain, 1.0f }, { hpf, 2.0f }, { lowFreq, 2.0f }, { low, 2.0f }, { midFreq, 4.0f }, { mid, 4.0f }, { high, 3.0f }, { output, -15.0f } } },
+        { n ("VOCAL \xc2\xb7 DRIVEN"), vocal | drive, { { gain, 9.0f }, { hpf, 2.0f }, { high, 3.0f }, { output, -24.0f } } },
+        { n ("VOCAL \xc2\xb7 RADIO GRIT"), vocal | drive,
+          { { gain, 10.0f }, { hpf, 4.0f }, { midFreq, 4.0f }, { mid, 6.0f }, { high, -4.0f }, { output, -24.0f } } },
+        { n ("DRUMS \xc2\xb7 BUS LINE"), drums | mix, { { gain, 2.0f }, { lowFreq, 2.0f }, { low, 3.0f }, { high, 4.0f }, { output, -10.0f } } },
+        { n ("DRUMS \xc2\xb7 KICK WEIGHT"), drums,
+          { { gain, 2.0f }, { lowFreq, 2.0f }, { low, 6.0f }, { midFreq, 2.0f }, { mid, -4.0f }, { high, 2.0f }, { output, -10.0f } } },
+        { n ("DRUMS \xc2\xb7 SNARE CRACK"), drums | drive,
+          { { gain, 1.0f }, { hpf, 2.0f }, { midFreq, 3.0f }, { mid, 3.0f }, { high, 5.0f }, { output, -15.0f } } },
+        { n ("DRUMS \xc2\xb7 ROOM SMASH"), drums | drive, { { gain, 8.0f }, { lowFreq, 3.0f }, { low, 3.0f }, { high, 4.0f }, { output, -20.0f } } },
+        { n ("BASS \xc2\xb7 GRIT"), bass | drive,
+          { { gain, 8.0f }, { lowFreq, 2.0f }, { low, 4.0f }, { midFreq, 2.0f }, { mid, 2.0f }, { output, -20.0f } } },
+        { n ("BASS \xc2\xb7 WARM DI"), bass,
+          { { gain, 2.0f }, { lowFreq, 2.0f }, { low, 3.0f }, { midFreq, 2.0f }, { mid, 2.0f }, { high, -3.0f }, { output, -10.0f } } },
+        { n ("GUITAR \xc2\xb7 CRUNCH"), instruments | drive,
+          { { gain, 9.0f }, { hpf, 2.0f }, { midFreq, 4.0f }, { mid, 3.0f }, { high, 2.0f }, { output, -24.0f } } },
+        { n ("ACOUSTIC \xc2\xb7 AIR"), instruments,
+          { { gain, 3.0f }, { hpf, 2.0f }, { midFreq, 3.0f }, { mid, -2.0f }, { high, 5.0f }, { output, -5.0f } } },
+        { n ("KEYS \xc2\xb7 WARMTH"), instruments,
+          { { gain, 2.0f }, { lowFreq, 3.0f }, { low, 2.0f }, { midFreq, 5.0f }, { mid, -2.0f }, { high, 3.0f }, { output, -10.0f } } },
+        { n ("MIX \xc2\xb7 GLUE COLOUR"), mix, { { gain, 3.0f }, { lowFreq, 1.0f }, { low, 2.0f }, { high, 2.0f }, { output, -5.0f } } },
+        { n ("MIX \xc2\xb7 CONSOLE TONE"), mix, { { gain, 2.0f }, { output, -10.0f } } },
+        { n ("LINE \xc2\xb7 CLEAN"), mix, { { gain, 4.0f } } },
     };
-    return list;
 }
 
-class N73PresetManager
+/** Les presets enregistrés avec l'ancien en-tête (fichiers .n73preset du même dossier) passent dans le navigateur,
+    une fois : chacun est recopié au format de la nouvelle barre, l'original reste en place. */
+inline void importOldUserPresets (const onirique::PresetBank& bank)
 {
-public:
-    explicit N73PresetManager (juce::AudioProcessorValueTreeState& s) : apvts (s) {}
-
-    static juce::File folder()
+    for (const auto& file : bank.getFolder().findChildFiles (juce::File::findFiles, false, "*.n73preset"))
     {
-        return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
-                   .getChildFile ("Onirique").getChildFile ("N73").getChildFile ("Presets");
-    }
+        const auto target = file.withFileExtension (bank.getExtension());
+        if (target.existsAsFile())
+            continue;
 
-    juce::Array<juce::File> userPresets() const
-    {
-        auto files = folder().findChildFiles (juce::File::findFiles, false, "*.n73preset");
-        files.sort();
-        return files;
-    }
-
-    juce::String currentName() const { return apvts.state.getProperty ("presetName", "INIT").toString(); }
-
-    /** valeurs de tous les paramètres du son (valeurs réelles). */
-    std::map<juce::String, float> capture() const
-    {
-        std::map<juce::String, float> m;
-        for (auto* p : apvts.processor.getParameters())
-            if (auto* rp = dynamic_cast<juce::RangedAudioParameter*> (p))
-                if (params::isSoundParameter (rp->getParameterID()))
-                    m[rp->getParameterID()] = rp->convertFrom0to1 (rp->getValue());
-        return m;
-    }
-
-    /** applique des valeurs ; un paramètre absent reprend sa valeur par défaut. */
-    void apply (const std::map<juce::String, float>& values)
-    {
-        for (auto* p : apvts.processor.getParameters())
-            if (auto* rp = dynamic_cast<juce::RangedAudioParameter*> (p))
-            {
-                const auto id = rp->getParameterID();
-                if (! params::isSoundParameter (id)) continue;
-                const auto it = values.find (id);
-                const float v01 = it != values.end() ? rp->convertTo0to1 (it->second) : rp->getDefaultValue();
-                rp->beginChangeGesture();
-                rp->setValueNotifyingHost (v01);
-                rp->endChangeGesture();
-            }
-    }
-
-    void loadFactory (int index)
-    {
-        const auto& p = factoryPresets()[(size_t) index];
-        std::map<juce::String, float> m (p.values.begin(), p.values.end());
-        apply (m);
-        apvts.state.setProperty ("presetName", p.name, nullptr);
-    }
-
-    bool loadFile (const juce::File& f)
-    {
-        auto xml = juce::XmlDocument::parse (f);
-        if (xml == nullptr || ! xml->hasTagName ("N73Preset")) return false;
-        std::map<juce::String, float> m;
-        for (auto* e : xml->getChildWithTagNameIterator ("Param"))
-            m[e->getStringAttribute ("id")] = (float) e->getDoubleAttribute ("value");
-        apply (m);
-        apvts.state.setProperty ("presetName", f.getFileNameWithoutExtension(), nullptr);
-        return true;
-    }
-
-    bool save (const juce::String& name)
-    {
-        const auto safe = juce::File::createLegalFileName (name.trim());
-        if (safe.isEmpty()) return false;
-        folder().createDirectory();
-        juce::XmlElement root ("N73Preset");
-        root.setAttribute ("version", 1);
-        for (const auto& [id, v] : capture())
+        if (const auto xml = juce::XmlDocument::parse (file); xml != nullptr && xml->hasTagName ("N73Preset"))
         {
-            auto* e = root.createNewChildElement ("Param");
-            e->setAttribute ("id", id);
-            e->setAttribute ("value", (double) v);
+            juce::ValueTree snapshot ("Snapshot");
+            for (auto* p : xml->getChildWithTagNameIterator ("Param"))
+                if (const auto id = p->getStringAttribute ("id"); ! params::notStored().contains (id))
+                    snapshot.setProperty (id, (float) p->getDoubleAttribute ("value"), nullptr);
+
+            if (const auto out = snapshot.createXml())
+                out->writeTo (target);
         }
-        const bool ok = root.writeTo (folder().getChildFile (safe + ".n73preset"));
-        if (ok) apvts.state.setProperty ("presetName", safe, nullptr);
-        return ok;
     }
-
-    /** suivant / précédent dans la liste usine puis utilisateur. */
-    void step (int delta)
-    {
-        const auto users = userPresets();
-        const int total = (int) factoryPresets().size() + users.size();
-        int cur = 0;
-        const auto name = currentName();
-        for (int i = 0; i < (int) factoryPresets().size(); ++i) if (factoryPresets()[(size_t) i].name == name) cur = i;
-        for (int i = 0; i < users.size(); ++i) if (users[i].getFileNameWithoutExtension() == name) cur = (int) factoryPresets().size() + i;
-        const int next = ((cur + delta) % total + total) % total;
-        if (next < (int) factoryPresets().size()) loadFactory (next);
-        else loadFile (users[next - (int) factoryPresets().size()]);
-    }
-
-private:
-    juce::AudioProcessorValueTreeState& apvts;
-};
+}
+} // namespace n73presets

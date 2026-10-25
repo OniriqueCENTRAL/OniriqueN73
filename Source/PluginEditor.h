@@ -3,14 +3,16 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
 #include "ui/Controls.h"
+#include "ui/OniriqueBar.h"
 #if N73_LICENCE
  #include "License/LicenseOverlay.h"
 #endif
 
 //==============================================================================
 //  L'interface du N73, telle que validée dans Claude Design : module 1073 à gauche (GAIN, HIGH, MID, LOW,
-//  HIGH PASS, EQL / PHASE), panneau de droite (MIC Z, PAD, fader, OUTPUT, POWER), bandeau du haut
-//  (presets, A / B, réglages). Taille de base 600 × 1120, redimensionnable sans déformation.
+//  HIGH PASS, EQL / PHASE), panneau de droite (MIC Z, PAD, fader, OUTPUT, POWER), et en haut la barre des plugins
+//  ONIRIQUE (le titre, les presets, IN, A / B, le menu ⋯) avec le bouton des réglages. Taille de base 600 × 1128,
+//  redimensionnable sans déformation.
 //==============================================================================
 class N73Editor : public juce::AudioProcessorEditor
 {
@@ -21,7 +23,8 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    static constexpr int baseWidth = 600, baseHeight = 1120;
+    static constexpr int baseWidth = 600, baseHeight = 1128;
+    static constexpr float topOffset = 8.0f;   // tout descend sous la barre du haut (84 points, deux rangées)
 
 private:
     /** petit bouton du bandeau, dessiné par une fonction. */
@@ -37,15 +40,13 @@ private:
 
     juce::RangedAudioParameter& p (const juce::String& id) { return *processor.apvts.getParameter (id); }
     void renderBackground();
-    void showPresetMenu();
     void showSettingsMenu();
-    void refreshHeader();
+    void paintTitle (juce::Graphics&, juce::Rectangle<float> area) const;   // le titre, dans la barre (en points)
     float scale() const { return (float) getWidth() / (float) baseWidth; }
 
     N73Processor& processor;
     ui::FontScope fonts;
     ui::MenuLook menuLook;
-    std::unique_ptr<juce::AlertWindow> saveDialog;
     ui::Assets assets;
     ui::ValueBubble bubble;
     juce::Image background, logo;
@@ -56,16 +57,8 @@ private:
     ui::ConsoleFader fader;
     // MIC Z et PAD n'existent que pour l'entrée micro : désactivés quand le gain est sur LINE (comme sur le plugin UAD)
     juce::ParameterAttachment inputWatch;
-    HeaderButton prevPreset, presetName, nextPreset, slotA, slotB, settings;
-
-    struct Refresher : juce::Timer
-    {
-        explicit Refresher (N73Editor& e) : ed (e) {}
-        void timerCallback() override { ed.refreshHeader(); }
-        N73Editor& ed;
-    } refresher { *this };
-    juce::String shownPreset;
-    int shownSlot = -1;
+    onirique::nuit::Bar bar;
+    HeaderButton settings;   // réglages modernes (CAL, LEVEL MATCH, qualité), à côté du menu de la barre
     bool sizeReady = false;   // la taille d'ouverture est posée : on peut la mémoriser
 
 #if N73_LICENCE
