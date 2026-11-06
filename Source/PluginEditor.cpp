@@ -64,6 +64,8 @@ N73Editor::N73Editor (N73Processor& proc)
       }),
       bar (proc.presets, proc.apvts, "N73", {}, baseWidth, 480)
 {
+    onirique::look::load();
+    bar.onThemeChanged = [this] { std::function<void (juce::Component&)> all = [&all] (juce::Component& k) { k.repaint(); for (auto* ch : k.getChildren()) all (*ch); }; all (*this); };
     mid.setMidLow (true);
     low.setMidLow (false);
     gain.inputMemory = [this] (bool mic) { return processor.lastGainIndex (mic); };

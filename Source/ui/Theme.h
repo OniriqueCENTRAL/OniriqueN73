@@ -1,4 +1,5 @@
 #pragma once
+#include "OniriqueTheme.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <array>
@@ -11,8 +12,9 @@
 //==============================================================================
 namespace ui
 {
-inline const juce::Colour bg { 0xff09080a }, blood { 0xff3d0910 }, bone { 0xfff2ecec }, haze { 0xffaea3a6 }, dim { 0xff8a7f82 },
-                          ember { 0xffe5384a }, paint { 0xfff4f0e8 }, rule { 0x24ffd6da };
+inline const juce::Colour bg { 0xff09080a }, bone { 0xfff2ecec }, haze { 0xffaea3a6 }, dim { 0xff8a7f82 }, paint { 0xfff4f0e8 }, rule { 0x24ffd6da };
+inline const juce::Colour& ember = onirique::look::ember;     // la couleur de l'interface (menu ⋯)
+inline const juce::Colour& blood = onirique::look::litBottom;
 
 enum class Face { display, body, mono };
 
